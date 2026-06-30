@@ -33,3 +33,33 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Planet surface dot layer slow rotation */
+@keyframes planet-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.planet-rotate {
+  transform-origin: center center;
+  animation: planet-spin 60s linear infinite;
+}
+
+/* Organic floating animations for component icons — 3 variants */
+@keyframes icon-float-1 {
+  0%, 100% { transform: translateY(0px)   rotate(0deg)    scale(1);     }
+  28%      { transform: translateY(-4px)  rotate(0.6deg)  scale(1.025); }
+  72%      { transform: translateY(3px)   rotate(-0.4deg) scale(0.978); }
+}
+@keyframes icon-float-2 {
+  0%, 100% { transform: translateY(0px)   rotate(0deg)     scale(1);     }
+  38%      { transform: translateY(-3px)  rotate(-0.7deg)  scale(1.02);  }
+  80%      { transform: translateY(2.5px) rotate(0.35deg)  scale(0.982); }
+}
+@keyframes icon-float-3 {
+  0%, 100% { transform: translateY(0px)   rotate(0deg)    scale(1);     }
+  22%      { transform: translateY(3.5px) rotate(0.5deg)  scale(1.02);  }
+  62%      { transform: translateY(-4px)  rotate(-0.5deg) scale(0.975); }
+}
+.icon-float-1 { animation: icon-float-1 3.1s  ease-in-out infinite; }
+.icon-float-2 { animation: icon-float-2 3.6s  ease-in-out infinite; }
+.icon-float-3 { animation: icon-float-3 2.85s ease-in-out infinite; }

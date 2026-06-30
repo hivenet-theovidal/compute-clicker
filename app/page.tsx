@@ -5,7 +5,7 @@ import * as Toast from '@radix-ui/react-toast';
 import { motion } from 'framer-motion';
 
 import NameModal from '@/components/NameModal';
-import ClickButton from '@/components/ClickButton';
+import PlanetView from '@/components/PlanetView';
 import RegionTabs from '@/components/RegionTabs';
 import ShopPanel from '@/components/ShopPanel';
 import Scoreboard from '@/components/Scoreboard';
@@ -181,17 +181,17 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <ClickButton
-                clickValue={gameState.clickValue}
-                epsDisplay={eps}
-                balance={gameState.balance}
+              <PlanetView
+                state={gameState}
+                activeRegion={activeRegion}
                 onCLick={handleClick}
+                onSelectRegion={setActiveRegion}
               />
             </motion.div>
           </div>
 
           {/* Center: Shop */}
-          <div className="w-[420px] border-l border-r border-slate-800 flex flex-col overflow-hidden">
+          <div className="w-[360px] border-l border-r border-slate-800 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-slate-800 flex-shrink-0">
               <h2 className="text-slate-300 text-sm font-semibold uppercase tracking-widest text-center">
                 Datacenter Shop
@@ -212,7 +212,7 @@ export default function Home() {
           </div>
 
           {/* Right: Scoreboard + Stats */}
-          <div className="w-72 p-4 flex flex-col gap-4 overflow-y-auto">
+          <div className="w-60 p-4 flex flex-col gap-4 overflow-y-auto">
             {identified && (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}

@@ -34,7 +34,7 @@ export default function Scoreboard({ playerName, playerTotal }: Props) {
   const playerRank = merged.findIndex((e) => e.name === playerName);
 
   return (
-    <div className="w-64 bg-slate-900/90 border border-slate-700 rounded-2xl p-4 shadow-2xl backdrop-blur">
+    <div className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-4 shadow-2xl backdrop-blur">
       <h2 className="text-slate-300 text-xs font-semibold uppercase tracking-widest mb-3 text-center">
         Leaderboard
       </h2>
