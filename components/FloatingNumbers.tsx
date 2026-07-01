@@ -24,7 +24,7 @@ export default function FloatingNumbers({ numbers }: Props) {
             initial={{ opacity: 1, y: 0, scale: 1 }}
             animate={{ opacity: 0, y: -80, scale: 1.2 }}
             transition={{ duration: 0.9, ease: 'easeOut' }}
-            className="absolute text-yellow-400 font-bold text-lg select-none drop-shadow-lg"
+            className="absolute text-accent-fg font-bold text-lg select-none drop-shadow-lg"
             style={{ left: n.x, top: n.y }}
           >
             +{n.value}

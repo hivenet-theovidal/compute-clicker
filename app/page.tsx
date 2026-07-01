@@ -128,14 +128,14 @@ export default function Home() {
   // ── Auto-save every 5s ─────────────────────────────────────────
   useEffect(() => {
     if (!identified) return;
-    const interval = setInterval(() => {
-      fetch('/api/state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: stateRef.current }),
-      });
-    }, SAVE_INTERVAL_MS);
-    return () => clearInterval(interval);
+    // const interval = setInterval(() => {
+    //   fetch('/api/state', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({ state: stateRef.current }),
+    //   });
+    // }, SAVE_INTERVAL_MS);
+    // return () => clearInterval(interval);
   }, [identified]);
 
   // ── Region unlock check ────────────────────────────────────────
@@ -195,8 +195,8 @@ export default function Home() {
 
   if (!loaded) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">Loading…</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-dim text-sm animate-pulse">Loading…</div>
       </div>
     );
   }
@@ -211,16 +211,16 @@ export default function Home() {
         style={{ backgroundImage: 'url(/assets/bg-pattern.svg)', backgroundSize: '60px 60px' }}
       />
 
-      <div className="relative min-h-screen bg-slate-950/90 text-white flex flex-col">
+      <div className="relative min-h-screen bg-background/90 text-fg flex flex-col">
         {/* Header */}
-        <header className="border-b border-slate-800 px-6 py-3 flex items-center justify-between flex-shrink-0">
+        <header className="border-b border-line px-6 py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-yellow-400 font-bold text-lg tracking-tight">HiveNet</span>
-            <span className="text-slate-600 text-sm">Cloud Clicker</span>
+            <span className="text-accent-fg font-bold text-lg tracking-tight">HiveNet</span>
+            <span className="text-faint text-sm">Cloud Clicker</span>
           </div>
           {identified && (
-            <div className="text-slate-400 text-sm">
-              Playing as <span className="text-white font-semibold">{playerName}</span>
+            <div className="text-muted text-sm">
+              Playing as <span className="text-fg font-semibold">{playerName}</span>
             </div>
           )}
         </header>
@@ -236,9 +236,9 @@ export default function Home() {
           />
 
           {/* Center: Shop */}
-          <div className="w-[360px] border-l border-r border-slate-800 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-800 flex-shrink-0">
-              <h2 className="text-slate-300 text-sm font-semibold uppercase tracking-widest text-center">
+          <div className="w-[360px] border-l border-r border-line flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-line flex-shrink-0">
+              <h2 className="text-muted text-sm font-semibold uppercase tracking-widest text-center">
                 Datacenter Shop
               </h2>
             </div>
@@ -272,23 +272,23 @@ export default function Home() {
             )}
 
             {/* Stats panel */}
-            <div className="bg-slate-900/80 border border-slate-700 rounded-2xl p-4 text-xs space-y-2">
-              <h3 className="text-slate-400 uppercase tracking-widest text-center mb-3">Stats</h3>
+            <div className="bg-surface/80 border border-line-2 rounded-2xl p-4 text-xs space-y-2">
+              <h3 className="text-muted uppercase tracking-widest text-center mb-3">Stats</h3>
               <div className="flex justify-between">
-                <span className="text-slate-500">Total earned</span>
-                <span className="text-white font-mono">{formatEuros(gameState.totalEarned)}</span>
+                <span className="text-dim">Total earned</span>
+                <span className="text-fg font-mono">{formatEuros(gameState.totalEarned)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Balance</span>
-                <span className="text-yellow-400 font-mono">{formatEuros(gameState.balance)}</span>
+                <span className="text-dim">Balance</span>
+                <span className="text-accent-fg font-mono">{formatEuros(gameState.balance)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Income/s</span>
-                <span className="text-green-400 font-mono">{formatEuros(eps)}</span>
+                <span className="text-dim">Income/s</span>
+                <span className="text-info-fg font-mono">{formatEuros(eps)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Click value</span>
-                <span className="text-slate-300 font-mono">{formatEuros(gameState.clickValue)}</span>
+                <span className="text-dim">Click value</span>
+                <span className="text-muted font-mono">{formatEuros(gameState.clickValue)}</span>
               </div>
             </div>
           </div>
@@ -303,12 +303,12 @@ export default function Home() {
           open={toastOpen}
           onOpenChange={setToastOpen}
           duration={3000}
-          className="bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3"
+          className="bg-surface-2 border border-line-2 rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3"
         >
-          <Toast.Description className="text-white text-sm font-medium">
+          <Toast.Description className="text-fg text-sm font-medium">
             {toastMsg}
           </Toast.Description>
-          <Toast.Close className="text-slate-500 hover:text-white text-xs ml-2">✕</Toast.Close>
+          <Toast.Close className="text-dim hover:text-fg text-xs ml-2">✕</Toast.Close>
         </Toast.Root>
         <Toast.Viewport className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 w-72" />
       </div>

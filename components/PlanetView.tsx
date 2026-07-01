@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
+import createGlobe from 'cobe';
+import type { Arc } from 'cobe';
 import {
   COMPONENTS,
   REGIONS,
@@ -14,40 +15,91 @@ import {
   totalEps,
 } from '@/lib/game-engine';
 
-// ── Geometry ───────────────────────────────────────────────────
-// PLANET_R drives all other dimensions; change one number to resize.
-const PLANET_R  = 200;
-const S         = PLANET_R / 150;   // scale relative to original design
-const CONTAINER = Math.round(680 * S / (200 / 150));  // ~680
-const C         = CONTAINER / 2;
-
-// ── Region geographic positions (already scaled) ───────────────
-const REGION_GEO: Record<RegionId, { x: number; y: number; label: string }> = {
-  us:     { x: Math.round(-82  * S), y: Math.round(-28 * S), label: 'US'     },
-  eu:     { x: Math.round(-8   * S), y: Math.round(-60 * S), label: 'EU'     },
-  brazil: { x: Math.round(-48  * S), y: Math.round( 62 * S), label: 'Brazil' },
-  uae:    { x: Math.round( 38  * S), y: Math.round(-18 * S), label: 'UAE'    },
-  sea:    { x: Math.round( 95  * S), y: Math.round( 20 * S), label: 'SEA'    },
-};
+// ── Globe geometry ─────────────────────────────────────────────
+const GLOBE_SIZE = 560;
+const CENTER = GLOBE_SIZE / 2;
+const RADIUS_PX = GLOBE_SIZE * 0.46; // on-screen sphere radius (tune if flags float off the surface)
 
 const COMPONENT_ORDER: ComponentType[] = ['cpu', 'ram', 'gpu', 'power', 'bandwidth', 'container'];
 
-// ── Fan layout for component icons around a region marker ──────
-function componentPositions(
-  rx: number, ry: number,
-  ownedTypes: ComponentType[],
-  iconSize: number,
-): { type: ComponentType; x: number; y: number }[] {
-  const n = ownedTypes.length;
-  if (n === 0) return [];
-  const outwardAngle = Math.atan2(ry, rx);
-  const spread = n === 1 ? 0 : n <= 3 ? Math.PI / 3 : Math.PI * 0.78;
-  const radius = iconSize * 1.4 + 12;
-  return ownedTypes.map((type, i) => {
-    const t = n === 1 ? 0 : (i / (n - 1)) - 0.5;
-    const angle = outwardAngle + t * spread;
-    return { type, x: rx + Math.cos(angle) * radius, y: ry + Math.sin(angle) * radius };
-  });
+// Real-world lat/lng for each region (representative data-center cities)
+const REGION_LOCATION: Record<RegionId, [number, number]> = {
+  uae:    [25.20,  55.27],   // Dubai
+  eu:     [50.11,   8.68],   // Frankfurt
+  us:     [38.90, -77.04],   // N. Virginia
+  sea:    [ 1.35, 103.82],   // Singapore
+  brazil: [-23.55, -46.63],  // São Paulo
+};
+
+// Flag emoji per region 🎉
+const REGION_FLAG: Record<RegionId, string> = {
+  uae:    '🇦🇪',
+  eu:     '🇪🇺',
+  us:     '🇺🇸',
+  sea:    '🇸🇬',
+  brazil: '🇧🇷',
+};
+
+// ── Colour helpers ─────────────────────────────────────────────
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+const REGION_RGB: Record<RegionId, [number, number, number]> = {
+  uae:    hexToRgb(REGIONS.uae.color),
+  eu:     hexToRgb(REGIONS.eu.color),
+  us:     hexToRgb(REGIONS.us.color),
+  sea:    hexToRgb(REGIONS.sea.color),
+  brazil: hexToRgb(REGIONS.brazil.color),
+};
+
+const D = Math.PI / 180;
+
+// Convert a location to the [phi, theta] that centres it toward the camera.
+function locationToAngles(lat: number, lng: number): [number, number] {
+  return [Math.PI - lng * D - Math.PI / 2, lat * D];
+}
+
+// Project a region onto the globe's screen space for the current rotation.
+// Returns pixel position + depth z (z > 0 ⇒ facing the camera). See scratch
+// validation: facing UAE puts EU up-left, SEA right, US/Brazil on the back.
+function projectRegion(rid: RegionId, phi: number, theta: number) {
+  const [lat, lng] = REGION_LOCATION[rid];
+  const f = lat * D;
+  const p0 = Math.PI - lng * D - Math.PI / 2;
+  const a = phi - p0;
+  const cosF = Math.cos(f), sinF = Math.sin(f);
+  const cosT = Math.cos(theta), sinT = Math.sin(theta);
+  const cosA = Math.cos(a), sinA = Math.sin(a);
+  const X = cosF * sinA;
+  const Y = sinF * cosT - cosF * cosA * sinT;
+  const Z = sinF * sinT + cosF * cosA * cosT;
+  return { x: CENTER + RADIUS_PX * X, y: CENTER - RADIUS_PX * Y, z: Z };
+}
+
+// Pick the equivalent of `target` phi nearest to `current` (avoids long spins).
+function nearestAngle(current: number, target: number): number {
+  let d = (target - current) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return current + d;
+}
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+function regionTotal(state: FullGameState, rid: RegionId): number {
+  const c = state.regions[rid].components;
+  return COMPONENT_ORDER.reduce((sum, t) => sum + c[t], 0);
+}
+
+// Glowing network links from the active region to every other unlocked region.
+function buildArcs(state: FullGameState, active: RegionId): Arc[] {
+  if (!state.regions[active].unlocked) return [];
+  return REGION_ORDER.filter((rid) => rid !== active && state.regions[rid].unlocked).map((rid) => ({
+    from: REGION_LOCATION[active],
+    to: REGION_LOCATION[rid],
+    color: REGION_RGB[active],
+  }));
 }
 
 // ── Component ──────────────────────────────────────────────────
@@ -66,18 +118,141 @@ export default function PlanetView({ state, activeRegion, onCLick, onSelectRegio
     [onCLick],
   );
 
-  // Icon size: shrinks gracefully as more types are owned
-  const totalOwnedTypes = useMemo(() => {
-    let t = 0;
-    for (const rid of REGION_ORDER)
-      t += Object.values(state.regions[rid].components).filter(v => v > 0).length;
-    return t;
-  }, [state.regions]);
+  // ── Rotation state (refs so the RAF loop survives re-renders) ──
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const phiRef = useRef(0);
+  const thetaRef = useRef(0.2);
+  const targetPhiRef = useRef(0);
+  const targetThetaRef = useRef(0.2);
+  const draggingRef = useRef(false);
+  const dragPrevRef = useRef<{ x: number; y: number } | null>(null);
 
-  const iconSize = Math.round(Math.max(18, Math.min(34, 34 - totalOwnedTypes * 0.4)));
+  // DOM refs to the flag markers, updated imperatively each frame.
+  const flagRefs = useRef<Partial<Record<RegionId, HTMLButtonElement>>>({});
 
-  // Translate a coordinate from the original 150-radius design to the current scale
-  const p = (v: number) => Math.round(C + v * S);
+  // Network arcs pushed into the globe only when they actually change.
+  const arcsRef = useRef<Arc[]>(buildArcs(state, activeRegion));
+  const dirtyRef = useRef(false);
+
+  // Signature of everything that affects arcs (not per-tick balance).
+  const arcSig = useMemo(
+    () => REGION_ORDER.map((rid) => (state.regions[rid].unlocked ? 1 : 0)).join('') + activeRegion,
+    [state, activeRegion],
+  );
+
+  useEffect(() => {
+    arcsRef.current = buildArcs(state, activeRegion);
+    dirtyRef.current = true;
+  }, [arcSig]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Spin the globe to face the active region whenever it changes.
+  useEffect(() => {
+    const [p, t] = locationToAngles(...REGION_LOCATION[activeRegion]);
+    targetPhiRef.current = nearestAngle(targetPhiRef.current, p);
+    targetThetaRef.current = clamp(t, -0.5, 0.5);
+  }, [activeRegion]);
+
+  // ── Create globe + drive the render loop ──────────────────────
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const dpr = Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 2);
+    let firstFrame = true;
+    let raf = 0;
+
+    const globe = createGlobe(canvas, {
+      devicePixelRatio: dpr,
+      width: GLOBE_SIZE * dpr,
+      height: GLOBE_SIZE * dpr,
+      phi: phiRef.current,
+      theta: thetaRef.current,
+      dark: 1,
+      diffuse: 1.25,
+      mapSamples: 16000,
+      mapBrightness: 5,
+      baseColor: [0.17, 0.19, 0.24],
+      markerColor: [1.0, 0.6, 0.2],
+      glowColor: [0.16, 0.28, 0.55],
+      markers: [], // regions are rendered as HTML flag emojis on top
+      arcs: arcsRef.current,
+      arcColor: [1.0, 0.6, 0.2],
+      arcWidth: 0.4,
+      arcHeight: 0.35,
+      markerElevation: 0.02,
+    });
+
+    const loop = () => {
+      if (!draggingRef.current) targetPhiRef.current += 0.0025; // gentle auto-rotation
+      phiRef.current += (targetPhiRef.current - phiRef.current) * 0.12;
+      thetaRef.current += (targetThetaRef.current - thetaRef.current) * 0.12;
+
+      const update: Parameters<typeof globe.update>[0] = {
+        phi: phiRef.current,
+        theta: thetaRef.current,
+      };
+      if (dirtyRef.current) {
+        update.arcs = arcsRef.current;
+        dirtyRef.current = false;
+      }
+      globe.update(update);
+
+      // Position the flag emojis over their sphere coordinates.
+      for (const rid of REGION_ORDER) {
+        const el = flagRefs.current[rid];
+        if (!el) continue;
+        const { x, y, z } = projectRegion(rid, phiRef.current, thetaRef.current);
+        const depth = Math.max(0, z);
+        const scale = 0.72 + 0.28 * depth;
+        el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${scale})`;
+        el.style.opacity = String(clamp(z / 0.16, 0, 1));
+        el.style.zIndex = String(Math.round((z + 1) * 100));
+        el.style.pointerEvents = z > 0.05 ? 'auto' : 'none';
+      }
+
+      if (firstFrame) {
+        firstFrame = false;
+        canvas.style.opacity = '1';
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      globe.destroy();
+    };
+  }, []);
+
+  // ── Drag-to-rotate ────────────────────────────────────────────
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    draggingRef.current = true;
+    dragPrevRef.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.style.cursor = 'grabbing';
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!draggingRef.current || !dragPrevRef.current) return;
+    const dx = e.clientX - dragPrevRef.current.x;
+    const dy = e.clientY - dragPrevRef.current.y;
+    dragPrevRef.current = { x: e.clientX, y: e.clientY };
+    targetPhiRef.current += dx * 0.005;
+    targetThetaRef.current = clamp(targetThetaRef.current - dy * 0.005, -0.5, 0.5);
+  }, []);
+
+  const endDrag = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    draggingRef.current = false;
+    dragPrevRef.current = null;
+    e.currentTarget.style.cursor = 'grab';
+  }, []);
+
+  const setFlagRef = useCallback(
+    (rid: RegionId) => (el: HTMLButtonElement | null) => {
+      if (el) flagRefs.current[rid] = el;
+    },
+    [],
+  );
 
   return (
     <div className="flex flex-col items-center gap-4 select-none w-full pt-6 pb-4">
@@ -88,284 +263,174 @@ export default function PlanetView({ state, activeRegion, onCLick, onSelectRegio
           initial={{ scale: 1.04 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.12 }}
-          className="text-5xl font-bold text-yellow-400 tabular-nums"
+          className="text-5xl font-bold text-accent-fg tabular-nums"
         >
           {formatEuros(state.balance)}
         </motion.div>
-        <div className="text-slate-400 text-base mt-1">{formatEuros(eps)}/s</div>
+        <div className="text-muted text-base mt-1">{formatEuros(eps)}/s</div>
       </div>
 
-      {/* Planet canvas */}
-      <div
-        className="relative flex-shrink-0"
-        style={{ width: CONTAINER, height: CONTAINER }}
-      >
-        {/* ── Planet SVG ── */}
-        <svg
-          className="absolute inset-0 pointer-events-none"
-          width={CONTAINER}
-          height={CONTAINER}
-          viewBox={`0 0 ${CONTAINER} ${CONTAINER}`}
-        >
-          <defs>
-            <radialGradient id="pg-ocean" cx="40%" cy="35%">
-              <stop offset="0%"   stopColor="#1a4a7a" />
-              <stop offset="50%"  stopColor="#0d2d52" />
-              <stop offset="100%" stopColor="#040f1e" />
-            </radialGradient>
-            <radialGradient id="pg-atmo" cx="50%" cy="50%">
-              <stop offset="68%" stopColor="transparent" />
-              <stop offset="100%" stopColor="#4a90d9" stopOpacity="0.18" />
-            </radialGradient>
-            <clipPath id="pg-clip">
-              <circle cx={C} cy={C} r={PLANET_R} />
-            </clipPath>
-          </defs>
-
-          {/* Ocean */}
-          <circle cx={C} cy={C} r={PLANET_R} fill="url(#pg-ocean)" />
-
-          {/* Continents — coordinates scaled inline via p() helper */}
-          <g clipPath="url(#pg-clip)" opacity="0.85">
-            {/* North America */}
-            <path
-              d={`M ${p(-112)},${p(-98)} Q ${p(-128)},${p(-75)} ${p(-122)},${p(-45)}
-                  Q ${p(-118)},${p(-20)} ${p(-100)},${p(-8)}
-                  Q ${p(-85)},${p(-2)} ${p(-75)},${p(-18)}
-                  Q ${p(-65)},${p(-35)} ${p(-62)},${p(-62)}
-                  Q ${p(-55)},${p(-90)} ${p(-78)},${p(-105)}
-                  Q ${p(-95)},${p(-112)} ${p(-112)},${p(-98)} Z`}
-              fill="#3d7228"
-            />
-            {/* Greenland */}
-            <ellipse cx={p(-68)} cy={p(-108)} rx={Math.round(22*S)} ry={Math.round(16*S)} fill="#4a7a30" opacity="0.7"/>
-            {/* South America */}
-            <path
-              d={`M ${p(-60)},${p(28)} Q ${p(-72)},${p(32)} ${p(-75)},${p(55)}
-                  Q ${p(-76)},${p(80)} ${p(-62)},${p(100)}
-                  Q ${p(-50)},${p(115)} ${p(-38)},${p(108)}
-                  Q ${p(-22)},${p(98)} ${p(-20)},${p(75)}
-                  Q ${p(-18)},${p(50)} ${p(-30)},${p(30)}
-                  Q ${p(-42)},${p(18)} ${p(-60)},${p(28)} Z`}
-              fill="#3d7228"
-            />
-            {/* Europe */}
-            <path
-              d={`M ${p(-28)},${p(-80)} Q ${p(-20)},${p(-92)} ${p(-5)},${p(-88)}
-                  Q ${p(8)},${p(-84)} ${p(12)},${p(-72)}
-                  Q ${p(18)},${p(-58)} ${p(8)},${p(-48)}
-                  Q ${p(-2)},${p(-40)} ${p(-15)},${p(-42)}
-                  Q ${p(-28)},${p(-44)} ${p(-35)},${p(-58)}
-                  Q ${p(-38)},${p(-70)} ${p(-28)},${p(-80)} Z`}
-              fill="#3d7228"
-            />
-            {/* Scandinavia */}
-            <path
-              d={`M ${p(-5)},${p(-92)} Q ${p(5)},${p(-105)} ${p(10)},${p(-95)}
-                  Q ${p(12)},${p(-80)} ${p(8)},${p(-72)}
-                  Q ${p(2)},${p(-72)} ${p(-5)},${p(-80)} Z`}
-              fill="#3d7228"
-            />
-            {/* Africa */}
-            <path
-              d={`M ${p(-18)},${p(-40)} Q ${p(2)},${p(-45)} ${p(20)},${p(-35)}
-                  Q ${p(35)},${p(-22)} ${p(38)},${p(5)}
-                  Q ${p(40)},${p(35)} ${p(28)},${p(72)}
-                  Q ${p(18)},${p(100)} ${p(5)},${p(105)}
-                  Q ${p(-10)},${p(108)} ${p(-20)},${p(90)}
-                  Q ${p(-32)},${p(68)} ${p(-32)},${p(35)}
-                  Q ${p(-32)},${p(5)} ${p(-22)},${p(-15)}
-                  Q ${p(-15)},${p(-30)} ${p(-18)},${p(-40)} Z`}
-              fill="#4a7a20"
-            />
-            {/* Arabian Peninsula */}
-            <path
-              d={`M ${p(22)},${p(-35)} Q ${p(42)},${p(-40)} ${p(55)},${p(-28)}
-                  Q ${p(62)},${p(-15)} ${p(58)},${p(5)}
-                  Q ${p(50)},${p(18)} ${p(38)},${p(12)}
-                  Q ${p(30)},${p(5)} ${p(28)},${p(-10)}
-                  Q ${p(24)},${p(-22)} ${p(22)},${p(-35)} Z`}
-              fill="#5a7a20"
-            />
-            {/* Asia */}
-            <path
-              d={`M ${p(12)},${p(-88)} Q ${p(45)},${p(-105)} ${p(90)},${p(-95)}
-                  Q ${p(128)},${p(-82)} ${p(138)},${p(-58)}
-                  Q ${p(145)},${p(-35)} ${p(135)},${p(-10)}
-                  Q ${p(120)},${p(18)} ${p(95)},${p(22)}
-                  Q ${p(72)},${p(25)} ${p(58)},${p(5)}
-                  Q ${p(42)},${p(-15)} ${p(40)},${p(-38)}
-                  Q ${p(38)},${p(-58)} ${p(22)},${p(-68)}
-                  Q ${p(14)},${p(-78)} ${p(12)},${p(-88)} Z`}
-              fill="#3d7228"
-            />
-            {/* India */}
-            <path
-              d={`M ${p(62)},${p(5)} Q ${p(72)},${p(8)} ${p(78)},${p(28)}
-                  Q ${p(80)},${p(48)} ${p(68)},${p(62)}
-                  Q ${p(58)},${p(72)} ${p(50)},${p(58)}
-                  Q ${p(46)},${p(40)} ${p(48)},${p(18)}
-                  Q ${p(52)},${p(5)} ${p(62)},${p(5)} Z`}
-              fill="#3d7228"
-            />
-            {/* Indochina / SEA */}
-            <path
-              d={`M ${p(95)},${p(22)} Q ${p(118)},${p(15)} ${p(132)},${p(32)}
-                  Q ${p(140)},${p(48)} ${p(128)},${p(58)}
-                  Q ${p(112)},${p(65)} ${p(100)},${p(55)}
-                  Q ${p(88)},${p(45)} ${p(88)},${p(30)}
-                  Q ${p(90)},${p(22)} ${p(95)},${p(22)} Z`}
-              fill="#3d7228"
-            />
-            {/* Indonesian islands */}
-            <ellipse cx={p(120)} cy={p(75)} rx={Math.round(28*S)} ry={Math.round(8*S)} fill="#3d7228" opacity="0.85"/>
-            <ellipse cx={p(150)} cy={p(83)} rx={Math.round(14*S)} ry={Math.round(6*S)} fill="#3d7228" opacity="0.75"/>
-            {/* Australia */}
-            <path
-              d={`M ${p(108)},${p(98)} Q ${p(128)},${p(90)} ${p(148)},${p(98)}
-                  Q ${p(162)},${p(108)} ${p(158)},${p(125)}
-                  Q ${p(148)},${p(140)} ${p(128)},${p(142)}
-                  Q ${p(108)},${p(138)} ${p(98)},${p(122)}
-                  Q ${p(92)},${p(108)} ${p(108)},${p(98)} Z`}
-              fill="#5a7a20"
-            />
-          </g>
-
-          {/* Atmosphere + specular */}
-          <circle cx={C} cy={C} r={PLANET_R} fill="url(#pg-atmo)" />
-          <ellipse cx={C - Math.round(55*S)} cy={C - Math.round(65*S)}
-                   rx={Math.round(55*S)} ry={Math.round(30*S)}
-                   fill="white" opacity="0.04" />
-          <circle cx={C} cy={C} r={PLANET_R} fill="none" stroke="#1a3a5c" strokeWidth="1.5" />
-        </svg>
-
-        {/* ── Atmosphere glow ring ── */}
+      {/* Globe */}
+      <div className="relative shrink-0" style={{ width: GLOBE_SIZE, height: GLOBE_SIZE }}>
+        {/* Atmosphere glow */}
         <div
-          className="absolute rounded-full pointer-events-none"
+          className="absolute inset-0 pointer-events-none rounded-full"
+          style={{ boxShadow: '0 0 80px #1a6aaa22, inset 0 0 60px #0d3a6618' }}
+        />
+        <canvas
+          ref={canvasRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerLeave={endDrag}
+          width={GLOBE_SIZE}
+          height={GLOBE_SIZE}
           style={{
-            left: C - PLANET_R - 18, top: C - PLANET_R - 18,
-            width: (PLANET_R + 18) * 2, height: (PLANET_R + 18) * 2,
-            boxShadow: '0 0 60px #1a6aaa28, 0 0 120px #0d3a6618',
-            border: '1px solid #1a4a7a22',
-            borderRadius: '50%',
+            width: GLOBE_SIZE,
+            height: GLOBE_SIZE,
+            cursor: 'grab',
+            opacity: 0,
+            transition: 'opacity 0.6s ease',
+            contain: 'layout paint size',
+            touchAction: 'none',
           }}
         />
 
-        {/* ── Region markers + component icons ── */}
-        {REGION_ORDER.map((rid) => {
-          const geo       = REGION_GEO[rid];
-          const regionDef = REGIONS[rid];
-          const rs        = state.regions[rid];
-          const isActive  = rid === activeRegion;
-          const isUnlocked = rs.unlocked;
+        {/* Flag-emoji markers (positioned imperatively by the render loop) */}
+        <div className="absolute inset-0 pointer-events-none">
+          {REGION_ORDER.map((rid) => {
+            const def = REGIONS[rid];
+            const rs = state.regions[rid];
+            const isActive = rid === activeRegion;
+            const total = regionTotal(state, rid);
+            const idx = REGION_ORDER.indexOf(rid);
+            const floatClass = `icon-float-${(idx % 3) + 1}`;
+            const fontSize =
+              (rs.unlocked ? 44 : 40) +
+              (rs.unlocked ? Math.min(16, total * 0.3) : 0) +
+              (isActive ? 8 : 0);
 
-          const ownedTypes = COMPONENT_ORDER.filter(t => rs.components[t] > 0);
-          const positions  = componentPositions(geo.x, geo.y, ownedTypes, iconSize);
-          const regionIdx  = REGION_ORDER.indexOf(rid);
-
-          return (
-            <div key={rid}>
-              {/* Component icons */}
-              {positions.map(({ type, x, y }) => {
-                const count    = rs.components[type];
-                const def      = COMPONENTS[type];
-                const sz       = Math.round(Math.min(iconSize + Math.log(count + 1) * 3, iconSize + 14));
-                const floatIdx = regionIdx * COMPONENT_ORDER.length + COMPONENT_ORDER.indexOf(type);
-                const variant  = (floatIdx % 3) + 1;                     // 1, 2 or 3
-                const delay    = ((floatIdx % 9) * 0.38).toFixed(2);     // 0 – 3.04 s
-
-                return (
-                  <motion.div
-                    key={type}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                    className="absolute pointer-events-none"
-                    style={{ left: C + x - sz / 2, top: C + y - sz / 2 }}
-                  >
-                    {/* Float wrapper — CSS animation so it doesn't conflict with Framer entry */}
-                    <div
-                      className={`icon-float-${variant}`}
-                      style={{ animationDelay: `${delay}s` }}
-                    >
-                      <div
-                        className="relative rounded-lg flex items-center justify-center"
-                        style={{
-                          width: sz, height: sz,
-                          background: '#0a1829ee',
-                          border: `1px solid ${regionDef.color}55`,
-                          boxShadow: `0 0 ${Math.min(count * 0.6, 18)}px ${regionDef.color}65`,
-                        }}
-                      >
-                        <Image
-                          src={`/assets/${type}.svg`}
-                          alt={def.name}
-                          width={Math.round(sz * 0.62)}
-                          height={Math.round(sz * 0.62)}
-                          draggable={false}
-                        />
-                        <div
-                          className="absolute -top-1.5 -right-1.5 rounded-full flex items-center justify-center font-bold text-black"
-                          style={{
-                            minWidth: 16, height: 16, paddingInline: 2,
-                            background: regionDef.color,
-                            fontSize: count >= 100 ? 7 : 9,
-                          }}
-                        >
-                          {count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-
-              {/* Region marker (clickable) */}
-              <div
-                className="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
-                style={{
-                  left: C + geo.x - 22, top: C + geo.y - 22,
-                  width: 44, height: 44,
-                  opacity: isUnlocked ? 1 : 0.35,
-                }}
-                onClick={(e) => { e.stopPropagation(); if (isUnlocked) onSelectRegion(rid); }}
+            return (
+              <button
+                key={rid}
+                ref={setFlagRef(rid)}
+                onClick={() => rs.unlocked && onSelectRegion(rid)}
+                aria-label={def.name}
+                className="group absolute left-0 top-0 will-change-transform"
+                style={{ opacity: 0, cursor: rs.unlocked ? 'pointer' : 'default' }}
               >
-                <div
-                  className="rounded-full transition-all duration-300"
-                  style={{
-                    width:  isActive ? 12 : 8,
-                    height: isActive ? 12 : 8,
-                    marginTop: 16,
-                    background: regionDef.color,
-                    boxShadow: isActive
-                      ? `0 0 10px ${regionDef.color}, 0 0 20px ${regionDef.color}80`
-                      : `0 0 5px ${regionDef.color}80`,
-                  }}
-                />
-                <div
-                  className="font-bold whitespace-nowrap leading-none"
-                  style={{
-                    fontSize: 9,
-                    color: isActive ? regionDef.color : '#94a3b8',
-                    textShadow: '0 1px 4px #000',
-                  }}
+                {/* Pulse ring on the active region */}
+                {isActive && rs.unlocked && (
+                  <span
+                    className="marker-pulse absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+                    style={{ width: 62, height: 62, border: `2px solid ${def.color}` }}
+                  />
+                )}
+
+                {/* Hover-scale layer — kept separate so it doesn't fight the idle float */}
+                <span className="relative block transition-transform duration-200 ease-out group-hover:scale-125">
+                  {/* The flag (staggered idle float animation) */}
+                  <span
+                    className={`relative block leading-none ${isActive ? 'marker-bob' : floatClass}`}
+                    style={{
+                      fontSize,
+                      animationDelay: `${idx * 0.4}s`,
+                      filter: rs.unlocked
+                        ? `drop-shadow(0 2px 5px #000b) drop-shadow(0 0 8px ${def.color}${isActive ? 'dd' : '66'})`
+                        : 'grayscale(0.5) drop-shadow(0 2px 5px #000b)',
+                    }}
+                  >
+                    {REGION_FLAG[rid]}
+
+                    {/* Lock badge */}
+                    {!rs.unlocked && (
+                      <span className="absolute -bottom-1 -right-1.5 text-[13px] drop-shadow">🔒</span>
+                    )}
+
+                    {/* Datacenter count badge */}
+                    {rs.unlocked && total > 0 && (
+                      <span
+                        className="absolute -top-1 -right-2 rounded-full px-1 font-mono text-[10px] font-bold text-black"
+                        style={{ background: def.color }}
+                      >
+                        {total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total}
+                      </span>
+                    )}
+                  </span>
+                </span>
+
+                {/* Hover label */}
+                <span
+                  className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 mt-1 whitespace-nowrap rounded-md bg-surface/90 px-2 py-0.5 text-[10px] font-semibold text-fg opacity-0 transition-opacity group-hover:opacity-100"
+                  style={{ border: `1px solid ${def.color}` }}
                 >
-                  {geo.label}
-                </div>
-              </div>
-            </div>
+                  {rs.unlocked ? def.name : `🔒 ${def.name} · ${formatEuros(def.unlockCost)}`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Region selector chips */}
+      <div className="flex flex-wrap items-center justify-center gap-2 max-w-140">
+        {REGION_ORDER.map((rid) => {
+          const def = REGIONS[rid];
+          const rs = state.regions[rid];
+          const isActive = rid === activeRegion;
+          const total = regionTotal(state, rid);
+          return (
+            <button
+              key={rid}
+              disabled={!rs.unlocked}
+              onClick={() => rs.unlocked && onSelectRegion(rid)}
+              className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-all"
+              style={{
+                background: isActive ? `${def.color}22` : 'var(--gray-a2)',
+                border: `1px solid ${isActive ? def.color : 'var(--gray-6)'}`,
+                color: isActive ? def.color : rs.unlocked ? 'var(--gray-11)' : 'var(--gray-8)',
+                opacity: rs.unlocked ? 1 : 0.5,
+                cursor: rs.unlocked ? 'pointer' : 'not-allowed',
+                boxShadow: isActive ? `0 0 12px ${def.color}55` : 'none',
+              }}
+            >
+              <span className="text-sm leading-none">{REGION_FLAG[rid]}</span>
+              {def.name}
+              {rs.unlocked ? (
+                total > 0 && (
+                  <span
+                    className="rounded-full px-1.5 font-mono text-[10px] text-black"
+                    style={{ background: def.color }}
+                  >
+                    {total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total}
+                  </span>
+                )
+              ) : (
+                <span className="text-[10px] opacity-70">🔒</span>
+              )}
+            </button>
           );
         })}
       </div>
 
-      {/* ── Dedicated click button ── */}
+      {/* Active region datacenter loadout */}
+      <div className="flex items-center gap-2 h-6">
+        {COMPONENT_ORDER.filter((t) => state.regions[activeRegion].components[t] > 0).map((t) => (
+          <div key={t} className="flex items-center gap-1 text-[11px] text-muted">
+            <img src={`/assets/${t}.svg`} alt={COMPONENTS[t].name} width={16} height={16} draggable={false} />
+            <span className="font-mono">{state.regions[activeRegion].components[t]}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Deploy button */}
       <motion.button
         whileTap={{ scale: 0.93 }}
         onClick={handleClickBtn}
-        className="relative flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-slate-900 focus:outline-none overflow-hidden"
+        className="relative flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-black focus:outline-none overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, #facc15, #f97316)',
-          boxShadow: '0 0 30px #facc1540, 0 4px 20px #00000060',
+          background: 'linear-gradient(135deg, #ff9a33, #f36f14)',
+          boxShadow: '0 0 30px #ff9a3340, 0 4px 20px #00000060',
         }}
         aria-label="Click to earn"
       >
@@ -382,12 +447,12 @@ export default function PlanetView({ state, activeRegion, onCLick, onSelectRegio
       </motion.button>
 
       {/* Active region hint */}
-      <div className="text-slate-600 text-xs text-center -mt-2">
+      <div className="text-faint text-xs text-center -mt-2">
         région active :{' '}
         <span className="font-semibold" style={{ color: REGIONS[activeRegion].color }}>
           {REGIONS[activeRegion].name}
         </span>
-        {' — cliquer sur un marqueur pour changer'}
+        {' — cliquer un drapeau ou glisser pour tourner 🌍'}
       </div>
     </div>
   );
