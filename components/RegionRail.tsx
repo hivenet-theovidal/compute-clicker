@@ -39,7 +39,7 @@ export default function RegionRail({ state, activeRegion, onSelectRegion }: Prop
             style={{
               background: active ? `linear-gradient(160deg, ${def.color}30, ${def.color}10)` : 'transparent',
               boxShadow: active ? `inset 0 0 0 1.5px ${def.color}, 0 0 22px -4px ${def.color}` : 'none',
-              opacity: rs.unlocked ? 1 : 0.62,
+              opacity: 1,
               cursor: 'pointer',
               transform: active ? 'scale(1.05)' : 'scale(1)',
             }}
@@ -56,9 +56,7 @@ export default function RegionRail({ state, activeRegion, onSelectRegion }: Prop
                 marginBottom: -2,
                 marginLeft: -4,
                 marginRight: -6,
-                filter: rs.unlocked
-                  ? `drop-shadow(0 4px 7px #000b) drop-shadow(0 0 11px ${def.color}99)`
-                  : 'grayscale(1) brightness(0.7)',
+                filter: `drop-shadow(0 4px 7px #000b) drop-shadow(0 0 11px ${def.color}99)`,
               }}
             />
             <div className="text-left leading-tight">

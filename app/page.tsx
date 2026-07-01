@@ -333,8 +333,8 @@ export default function Home() {
               </div>
             )}
           </div>
-          {/* region rail centered in the remaining space */}
-          <div className="flex-1 flex justify-center pt-4">
+          {/* region rail pinned to the top right */}
+          <div className="flex-1 flex justify-end pt-4">
             <RegionRail state={gameState} activeRegion={activeRegion} onSelectRegion={setActiveRegion} />
           </div>
         </div>
