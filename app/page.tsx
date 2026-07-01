@@ -26,6 +26,15 @@ import {
   type ComponentType,
 } from '@/lib/game-engine';
 
+// Type mis à jour pour inclure la bonne réponse
+type QcmEvent = {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  penaltyType: ComponentType;
+};
+
 const SAVE_INTERVAL_MS = 5000;
 const TICK_INTERVAL_MS = 100;
 
@@ -121,10 +130,18 @@ export default function Home() {
   const [underAttack, setUnderAttack] = useState<{ reduction: number; expiresAt: number } | null>(null);
   const knownAttackExpiresRef = useRef<number | null>(null);
 
+  const [activeQcm, setActiveQcm] = useState<QcmEvent | null>(null);
+  // État pour gérer l'affichage de la validation
+  const [qcmFeedback, setQcmFeedback] = useState<'correct' | 'incorrect' | null>(null);
+
+  const activeQcmRef = useRef(activeQcm);
+  activeQcmRef.current = activeQcm;
+  const qcmFeedbackRef = useRef(qcmFeedback);
+  qcmFeedbackRef.current = qcmFeedback;
+
   const stateRef = useRef(gameState);
   stateRef.current = gameState;
 
-  // ── Identify on mount ──────────────────────────────────────────
   useEffect(() => {
     fetch('/api/identify')
       .then((r) => r.json())
@@ -184,6 +201,9 @@ export default function Home() {
   useEffect(() => {
     if (!identified) return;
     const interval = setInterval(() => {
+      // Bloque le tick si un QCM est affiché OU si on est sur l'écran de feedback
+      if (activeQcmRef.current || qcmFeedbackRef.current) return;
+
       const now = Date.now();
       const attack = underAttackRef.current;
       const multiplier = attack && attack.expiresAt > now ? 1 - attack.reduction : 1.0;
@@ -192,20 +212,28 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [identified]);
 
-  // ── Auto-save every 5s ─────────────────────────────────────────
   useEffect(() => {
     if (!identified) return;
-    const interval = setInterval(() => {
-      fetch('/api/state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: stateRef.current }),
-      });
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: stateRef.current }),
+        });
+        const data = await res.json();
+
+        // N'affiche un QCM que s'il n'y en a pas déjà un en cours
+        if (data.qcmEvent && !activeQcmRef.current && !qcmFeedbackRef.current) {
+          setActiveQcm(data.qcmEvent);
+        }
+      } catch (err) {
+        console.error("Failed to save state:", err);
+      }
     }, SAVE_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [identified]);
 
-  // ── Region unlock check ────────────────────────────────────────
   const prevTotalRef = useRef(0);
   useEffect(() => {
     if (!identified) return;
@@ -231,8 +259,9 @@ export default function Home() {
     });
   }, [Math.floor(gameState.totalEarned / 50), identified]);
 
-  // ── Handlers ──────────────────────────────────────────────────
   const handleClick = useCallback((x: number, y: number) => {
+    if (activeQcmRef.current || qcmFeedbackRef.current) return;
+
     setGameState((prev) => click(prev));
     const value = formatEuros(stateRef.current.clickValue);
     const id = ++floatingIdCounter;
@@ -243,6 +272,8 @@ export default function Home() {
   }, []);
 
   const handleBuy = useCallback((regionId: RegionId, componentType: ComponentType) => {
+    if (activeQcmRef.current || qcmFeedbackRef.current) return;
+
     setGameState((prev) => {
       const next = buyComponent(prev, regionId, componentType);
       if (!next) return prev;
@@ -262,6 +293,45 @@ export default function Home() {
     setGameState(initialGameState());
   }, []);
 
+  // --- Logique de validation et pénalité du QCM ---
+  const handleQcmAnswer = useCallback((selectedOption: string) => {
+    if (!activeQcm) return;
+
+    if (selectedOption === activeQcm.correctAnswer) {
+      // Bonne réponse
+      setQcmFeedback('correct');
+      setTimeout(() => {
+        setQcmFeedback(null);
+        setActiveQcm(null);
+      }, 2000);
+    } else {
+      // Mauvaise réponse -> Pénalité de 15%
+      setQcmFeedback('incorrect');
+
+      setGameState((prev) => {
+        // Copie profonde de l'état pour React
+        const next = JSON.parse(JSON.stringify(prev)) as FullGameState;
+
+        // On retire 15% de ce matériel dans toutes les régions
+        for (const rid of Object.keys(next.regions) as RegionId[]) {
+          const currentAmount = next.regions[rid].components[activeQcm.penaltyType] || 0;
+          // Math.floor permet de ne rien perdre si on a moins de 7 items,
+          // utilise Math.ceil si tu veux qu'ils perdent toujours au moins 1 item.
+          const lostAmount = Math.floor(currentAmount * 0.15);
+          next.regions[rid].components[activeQcm.penaltyType] = Math.max(0, currentAmount - lostAmount);
+        }
+        return next;
+      });
+
+      // Laisse le temps au joueur de pleurer ses serveurs perdus
+      setTimeout(() => {
+        setQcmFeedback(null);
+        setActiveQcm(null);
+      }, 3000);
+    }
+  }, [activeQcm]);
+  // ---------------------------------------------------
+
   if (!loaded) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -276,15 +346,14 @@ export default function Home() {
 
   return (
     <Toast.Provider swipeDirection="right">
-      {/* Background pattern */}
       <div
-        className="fixed inset-0 opacity-30 pointer-events-none"
+        className="fixed inset-0 opacity-30 pointer-events-none z-0"
         style={{ backgroundImage: 'url(/assets/bg-pattern.svg)', backgroundSize: '60px 60px' }}
       />
 
-      <div className="relative min-h-screen bg-slate-950/90 text-white flex flex-col">
-        {/* Header */}
-        <header className="border-b border-slate-800 px-6 py-3 flex items-center justify-between flex-shrink-0">
+      <div className="relative min-h-screen bg-slate-950/90 text-white flex flex-col overflow-hidden">
+
+        <header className="border-b border-slate-800 px-6 py-3 flex items-center justify-between flex-shrink-0 z-10">
           <div className="flex items-center gap-3">
             <span className="text-yellow-400 font-bold text-lg tracking-tight">HiveNet</span>
             <span className="text-slate-600 text-sm">Cloud Clicker</span>
@@ -297,7 +366,7 @@ export default function Home() {
         </header>
 
         {/* Main layout */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden z-10">
           {/* Left: Planet + click button — responsive scale */}
           <PlanetPanel
             gameState={gameState}
@@ -307,7 +376,6 @@ export default function Home() {
             underAttack={!!(underAttack && underAttack.expiresAt > Date.now())}
           />
 
-          {/* Center: Shop */}
           <div className="w-[360px] border-l border-r border-slate-800 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-slate-800 flex-shrink-0">
               <h2 className="text-slate-300 text-sm font-semibold uppercase tracking-widest text-center">
@@ -328,7 +396,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right: Scoreboard + Stats */}
           <div className="w-60 p-4 flex flex-col gap-4 overflow-y-auto">
             {identified && (
               <motion.div
@@ -348,7 +415,6 @@ export default function Home() {
               </motion.div>
             )}
 
-            {/* Stats panel */}
             <div className="bg-slate-900/80 border border-slate-700 rounded-2xl p-4 text-xs space-y-2">
               <h3 className="text-slate-400 uppercase tracking-widest text-center mb-3">Stats</h3>
               <div className="flex justify-between">
@@ -382,16 +448,98 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Overlays */}
+        {/* MODALE QCM BLOQUANTE */}
+        <AnimatePresence>
+          {activeQcm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="w-96 bg-slate-900 border border-yellow-500 rounded-xl p-6 shadow-[0_0_50px_rgba(234,179,8,0.2)] text-white relative overflow-hidden"
+              >
+                {/* ETAT 1 : LA QUESTION */}
+                {!qcmFeedback && (
+                  <>
+                    <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500/50" />
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-2xl">⚠️</span>
+                      <div>
+                        <h3 className="text-yellow-500 font-bold text-sm tracking-widest uppercase">
+                          Incident Système
+                        </h3>
+                        <p className="text-slate-400 text-xs">Le temps est suspendu.</p>
+                      </div>
+                    </div>
+
+                    <p className="text-base text-slate-200 mb-6 font-medium leading-relaxed">
+                      {activeQcm.question}
+                    </p>
+
+                    <div className="flex flex-col gap-3">
+                      {activeQcm.options.map((opt, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleQcmAnswer(opt)}
+                          className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-yellow-500/50 px-4 py-3 rounded-lg text-left text-sm transition-all duration-200 shadow-sm"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 text-xs font-mono text-center text-red-400 bg-red-950/30 py-2 rounded border border-red-900/50">
+                      Risque : -15% de vos {activeQcm.penaltyType.toUpperCase()}
+                    </div>
+                  </>
+                )}
+
+                {/* ETAT 2 : REPONSE CORRECTE */}
+                {qcmFeedback === 'correct' && (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <span className="text-5xl mb-4">✅</span>
+                    <h3 className="text-green-500 font-bold text-xl uppercase tracking-widest mb-2">
+                      Correct !
+                    </h3>
+                    <p className="text-slate-300 text-sm">
+                      L'infrastructure est en sécurité.<br/>Reprise du système...
+                    </p>
+                  </div>
+                )}
+
+                {/* ETAT 3 : REPONSE INCORRECTE */}
+                {qcmFeedback === 'incorrect' && (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <span className="text-5xl mb-4">🔥</span>
+                    <h3 className="text-red-500 font-bold text-xl uppercase tracking-widest mb-2">
+                      Faux !
+                    </h3>
+                    <p className="text-slate-300 text-sm mb-4">
+                      La bonne réponse était :<br/>
+                      <span className="text-white font-bold">{activeQcm.correctAnswer}</span>
+                    </p>
+                    <div className="bg-red-950/50 border border-red-900 text-red-400 px-4 py-2 rounded text-sm font-mono uppercase">
+                      Pénalité : -15% {activeQcm.penaltyType}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <NameModal open={!identified && loaded} onIdentified={handleIdentified} />
         <FloatingNumbers numbers={floatingNums} />
 
-        {/* Toast */}
         <Toast.Root
           open={toastOpen}
           onOpenChange={setToastOpen}
           duration={4000}
-          className={`border rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3 ${
+          className={`border rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3 z-[60] ${
             toastVariant === 'red'
               ? 'bg-red-950 border-red-500/60'
               : toastVariant === 'green'
@@ -404,7 +552,7 @@ export default function Home() {
           </Toast.Description>
           <Toast.Close className="text-slate-500 hover:text-white text-xs ml-2">✕</Toast.Close>
         </Toast.Root>
-        <Toast.Viewport className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 w-72" />
+        <Toast.Viewport className="fixed bottom-4 right-4 z-[70] flex flex-col gap-2 w-72" />
       </div>
     </Toast.Provider>
   );
