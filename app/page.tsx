@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Toast from '@radix-ui/react-toast';
-import { motion } from 'framer-motion';
 
 import NameModal from '@/components/NameModal';
 import GameBackground from '@/components/GameBackground';
@@ -34,58 +33,16 @@ const TICK_INTERVAL_MS = 100;
 
 let floatingIdCounter = 0;
 
-// Natural size of PlanetView (px) — must match actual render dimensions
-const PLANET_VIEW_W = 680;
-const PLANET_VIEW_H = 980;
-
-function PlanetPanel({
-  gameState, activeRegion, onCLick, onSelectRegion,
-}: {
-  gameState: FullGameState;
-  activeRegion: RegionId;
-  onCLick: (x: number, y: number) => void;
-  onSelectRegion: (id: RegionId) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      setScale(Math.min(1, width / PLANET_VIEW_W, height / PLANET_VIEW_H));
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <div ref={containerRef} className="flex-1 relative overflow-hidden">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          width: PLANET_VIEW_W,
-          height: PLANET_VIEW_H,
-          transform: `translate(-50%, -50%) scale(${scale})`,
-          transformOrigin: 'center center',
-        }}
-      >
-        <PlanetView
-          state={gameState}
-          activeRegion={activeRegion}
-          onCLick={onCLick}
-          onSelectRegion={onSelectRegion}
-        />
-      </motion.div>
-    </div>
-  );
+interface AttacksResponse {
+  activeAttacks: { reduction: number; expires_at: number }[];
+  myCooldowns: Record<string, number>;
 }
+
+const TOAST_STYLE: Record<'default' | 'red' | 'green', { border: string; glow: string }> = {
+  default: { border: '#ff9a3355', glow: '#ff9a33' },
+  red: { border: '#ff5a5a66', glow: '#ff3b3b' },
+  green: { border: '#43d6b566', glow: '#22c39a' },
+};
 
 export default function Home() {
   const [identified, setIdentified] = useState(false);
@@ -101,12 +58,17 @@ export default function Home() {
   const [toastMsg, setToastMsg] = useState('');
   const [toastVariant, setToastVariant] = useState<'default' | 'red' | 'green'>('default');
 
-  // Attack state
   const [underAttack, setUnderAttack] = useState<{ reduction: number; expiresAt: number } | null>(null);
   const knownAttackExpiresRef = useRef<number | null>(null);
 
   const stateRef = useRef(gameState);
   stateRef.current = gameState;
+
+  const showToast = useCallback((msg: string, variant: 'default' | 'red' | 'green' = 'default') => {
+    setToastMsg(msg);
+    setToastVariant(variant);
+    setToastOpen(true);
+  }, []);
 
   // ── Identify on mount ──────────────────────────────────────────
   useEffect(() => {
@@ -125,46 +87,35 @@ export default function Home() {
       });
   }, []);
 
-  // ── Poll attacks every 5s ─────────────────────────────────────
+  // ── Poll sabotage attacks ──────────────────────────────────────
   useEffect(() => {
     if (!identified) return;
     const poll = async () => {
       const res = await fetch('/api/attacks');
       if (!res.ok) return;
-      const data = await res.json() as AttacksResponse;
+      const data = (await res.json()) as AttacksResponse;
       const attacks = data.activeAttacks ?? [];
-
       if (attacks.length > 0) {
         const attack = attacks[0];
         const isNew = knownAttackExpiresRef.current !== attack.expires_at;
         knownAttackExpiresRef.current = attack.expires_at;
         setUnderAttack({ reduction: attack.reduction, expiresAt: attack.expires_at });
-        if (isNew) {
-          setToastMsg('🔴 Sabotage detected — income -30% for 90s');
-          setToastVariant('red');
-          setToastOpen(true);
-        }
-      } else {
-        if (knownAttackExpiresRef.current !== null) {
-          knownAttackExpiresRef.current = null;
-          setUnderAttack(null);
-          setToastMsg('✅ Sabotage neutralized');
-          setToastVariant('green');
-          setToastOpen(true);
-        }
+        if (isNew) showToast('🔴 Sabotage detected — income −30% for 90s', 'red');
+      } else if (knownAttackExpiresRef.current !== null) {
+        knownAttackExpiresRef.current = null;
+        setUnderAttack(null);
+        showToast('✅ Sabotage neutralized', 'green');
       }
     };
     poll();
     const interval = setInterval(poll, 5000);
     return () => clearInterval(interval);
-  }, [identified]);
+  }, [identified, showToast]);
 
-  // ── Game tick (passive income) ─────────────────────────────────
+  // ── Game tick ──────────────────────────────────────────────────
   useEffect(() => {
     if (!identified) return;
-    const interval = setInterval(() => {
-      setGameState((prev) => tick(prev, Date.now()));
-    }, TICK_INTERVAL_MS);
+    const interval = setInterval(() => setGameState((prev) => tick(prev, Date.now())), TICK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [identified]);
 
@@ -197,14 +148,13 @@ export default function Home() {
           const attempt = unlockRegion(next, rid);
           if (attempt) {
             next = attempt;
-            setToastMsg(`🌍 Region unlocked: ${REGIONS[rid].name}!`);
-            setToastOpen(true);
+            showToast(`🌍 New region online — ${REGIONS[rid].name}!`);
           }
         }
       }
       return next;
     });
-  }, [Math.floor(gameState.totalEarned / 50), identified]);
+  }, [Math.floor(gameState.totalEarned / 50), identified, showToast]);
 
   // ── Handlers ──────────────────────────────────────────────────
   const spawnFloat = useCallback((x: number, y: number, value: string, crit = false) => {
@@ -222,19 +172,19 @@ export default function Home() {
     [spawnFloat],
   );
 
-  const handleBuy = useCallback((regionId: RegionId, componentType: ComponentType) => {
-    setGameState((prev) => {
-      const next = buyComponent(prev, regionId, componentType);
-      if (!next) return prev;
-      setFlashKey((k) => k + 1);
-      const newCount = next.regions[regionId].components[componentType];
-      if (newCount === 1) {
-        setToastMsg(`⚡ First ${componentType.toUpperCase()} in ${REGIONS[regionId].name}!`);
-        setToastOpen(true);
-      }
-      return next;
-    });
-  }, []);
+  const handleBuy = useCallback(
+    (regionId: RegionId, componentType: ComponentType) => {
+      setGameState((prev) => {
+        const next = buyComponent(prev, regionId, componentType);
+        if (!next) return prev;
+        setFlashKey((k) => k + 1);
+        const newCount = next.regions[regionId].components[componentType];
+        if (newCount === 1) showToast(`⚡ First ${componentType.toUpperCase()} online in ${REGIONS[regionId].name}!`);
+        return next;
+      });
+    },
+    [showToast],
+  );
 
   const handleIdentified = useCallback((name: string) => {
     setPlayerName(name);
@@ -251,8 +201,10 @@ export default function Home() {
   }
 
   const baseEps = totalEps(gameState);
-  const attackMultiplier = underAttack && underAttack.expiresAt > Date.now() ? 1 - underAttack.reduction : 1.0;
-  const eps = baseEps * attackMultiplier;
+  const attacked = !!underAttack && underAttack.expiresAt > Date.now();
+  const eps = baseEps * (attacked ? 1 - underAttack!.reduction : 1);
+  const attackSecs = attacked ? Math.max(0, Math.ceil((underAttack!.expiresAt - Date.now()) / 1000)) : 0;
+  const tv = TOAST_STYLE[toastVariant];
 
   return (
     <Toast.Provider swipeDirection="right">
@@ -268,7 +220,7 @@ export default function Home() {
           />
         )}
 
-        {/* HERO GLOBE (centered) */}
+        {/* HERO GLOBE */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <PlanetView state={gameState} activeRegion={activeRegion} onSelectRegion={setActiveRegion} />
         </div>
@@ -277,83 +229,57 @@ export default function Home() {
         <div className="absolute left-5 top-4 flex items-center gap-2">
           <span className="grid place-items-center rounded-xl text-lg" style={{ width: 34, height: 34, background: 'linear-gradient(140deg,#ff9a33,#f36f14)', boxShadow: '0 0 18px -4px #ff9a33' }}>🛰️</span>
           <div className="leading-none">
-            <div className="font-black tracking-tight text-fg glow-orange" style={{ color: '#ffb257' }}>HiveNet</div>
+            <div className="font-black tracking-tight glow-orange" style={{ color: '#ffb257' }}>HiveNet</div>
             <div className="text-[10px] uppercase tracking-[0.25em] text-dim">Cloud Empire</div>
           </div>
-          {identified && (
-            <div className="text-slate-400 text-sm">
-              Playing as <span className="text-white font-semibold">{playerName}</span>
+        </div>
+
+        {/* Player badge */}
+        {identified && (
+          <div className="glass absolute right-5 top-4 rounded-full px-4 py-2 text-xs">
+            <span className="text-dim">Commander </span>
+            <span className="font-bold text-fg">{playerName}</span>
+          </div>
+        )}
+
+        {/* Currency HUD */}
+        <div className="absolute left-1/2 top-6 -translate-x-1/2 flex flex-col items-center">
+          <CurrencyHUD balance={gameState.balance} eps={eps} />
+          {attacked && (
+            <div
+              className="glow-pulse mt-2 rounded-full px-3 py-1 text-[11px] font-bold"
+              style={{ background: 'rgba(255,59,59,0.14)', color: '#ff8a8a', boxShadow: 'inset 0 0 0 1px #ff5a5a55' }}
+            >
+              ⚠ UNDER SABOTAGE · −{Math.round(underAttack!.reduction * 100)}% · {attackSecs}s
             </div>
           )}
-        </header>
+        </div>
 
-        {/* Main layout */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left: Planet + click button — responsive scale */}
-          <PlanetPanel
-            gameState={gameState}
-            activeRegion={activeRegion}
-            onCLick={handleClick}
-            onSelectRegion={setActiveRegion}
-          />
-
-          {/* Center: Shop */}
-          <div className="w-[360px] border-l border-r border-slate-800 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-800 flex-shrink-0">
-              <h2 className="text-slate-300 text-sm font-semibold uppercase tracking-widest text-center">
-                Datacenter Shop
-              </h2>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <RegionTabs
-                state={gameState}
-                activeRegion={activeRegion}
-                onChangeRegion={setActiveRegion}
-              />
-              <ShopPanel
-                state={gameState}
-                activeRegion={activeRegion}
-                onBuy={handleBuy}
-              />
-            </div>
+        {/* Leaderboard (with sabotage) */}
+        {identified && (
+          <div className="absolute left-5 top-24">
+            <LeaderboardWindow
+              playerName={playerName}
+              playerId={playerId}
+              playerTotal={gameState.totalEarned}
+              playerBalance={gameState.balance}
+            />
           </div>
+        )}
 
-          {/* Right: Scoreboard + Stats */}
-          <div className="w-60 p-4 flex flex-col gap-4 overflow-y-auto">
-            {identified && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Scoreboard
-                  playerName={playerName}
-                  playerTotal={gameState.totalEarned}
-                />
-              </motion.div>
-            )}
+        {/* Stats */}
+        <div className="absolute left-5 bottom-5">
+          <StatsWidget totalEarned={gameState.totalEarned} eps={eps} clickValue={gameState.clickValue} />
+        </div>
 
-            {/* Stats panel */}
-            <div className="bg-slate-900/80 border border-slate-700 rounded-2xl p-4 text-xs space-y-2">
-              <h3 className="text-slate-400 uppercase tracking-widest text-center mb-3">Stats</h3>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Total earned</span>
-                <span className="text-white font-mono">{formatEuros(gameState.totalEarned)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Balance</span>
-                <span className="text-yellow-400 font-mono">{formatEuros(gameState.balance)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Income/s</span>
-                <span className="text-green-400 font-mono">{formatEuros(eps)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Click value</span>
-                <span className="text-slate-300 font-mono">{formatEuros(gameState.clickValue)}</span>
-              </div>
-            </div>
-          </div>
+        {/* Deploy */}
+        <div className="absolute left-1/2 bottom-7 -translate-x-1/2">
+          <DeployButton clickValue={gameState.clickValue} onCLick={handleClick} />
+        </div>
+
+        {/* Tech tree */}
+        <div className="absolute right-5 bottom-5">
+          <TechTree state={gameState} activeRegion={activeRegion} onBuy={handleBuy} onSelectRegion={setActiveRegion} />
         </div>
 
         {/* Overlays */}
@@ -364,8 +290,9 @@ export default function Home() {
         <Toast.Root
           open={toastOpen}
           onOpenChange={setToastOpen}
-          duration={3000}
-          className="bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3"
+          duration={3200}
+          className="glass rounded-2xl px-4 py-3 flex items-center justify-center gap-3 transition-all data-[state=closed]:opacity-0 data-[state=closed]:translate-y-3"
+          style={{ boxShadow: `0 0 0 1px ${tv.border}, inset 0 0 34px -18px ${tv.glow}, 0 24px 70px -30px rgba(0,0,0,0.9)` }}
         >
           <Toast.Description className="text-fg text-sm font-semibold">{toastMsg}</Toast.Description>
         </Toast.Root>
