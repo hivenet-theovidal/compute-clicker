@@ -12,11 +12,97 @@ import {
 
 const ANTIMATTER_QUESTIONS = [
   {
+    id: "ceo_antimatter",
+    question: "Who is the Co-founder, Executive Chairman, and CEO of Antimatter?",
+    options: ["Kyllian Mbappe", "David Gurlé", "Tim Cook", "Queenie Chan"],
+    correctAnswer: "David Gurlé",
+    penaltyType: "cpu"
+  },
+
+
+  {
+    id: "pc_definition",
+    question: "What is the primary function of PoliCloud in the context of Hivenet and Antimatter?",
+    options: ["A social media platform", "A sovereign, modular micro-data center network", "A consumer VPN service", "A blockchain wallet"],
+    correctAnswer: "A sovereign, modular micro-data center network",
+    penaltyType: "node"
+  },
+  {
+    id: "pc_target",
+    question: "Which of these groups is a target audience for PoliCloud's sovereign infrastructure?",
+    options: ["Only individual gamers", "Farmers, enterprises, and public institutions", "Only mobile app developers", "Cryptocurrency day traders"],
+    correctAnswer: "Farmers, enterprises, and public institutions",
+    penaltyType: "cpu"
+  },
+  {
+    id: "pc_workload",
+    question: "PoliCloud is specifically designed to handle which type of intensive computing tasks?",
+    options: ["Basic word processing", "HPC and AI inference workloads", "Simple email hosting", "Ad-supported web hosting"],
+    correctAnswer: "HPC and AI inference workloads",
+    penaltyType: "gpu"
+  },
+  {
+    id: "pc_sovereignty",
+    question: "Why does David Gurlé emphasize 'sovereign infrastructure' for running Open Source LLMs?",
+    options: ["To sell user data to big tech", "To ensure control, transparency, and security over AI systems", "To require internet access to operate", "To centralize all data in one location"],
+    correctAnswer: "To ensure control, transparency, and security over AI systems",
+    penaltyType: "power"
+  },
+  {
+    id: "pc_backbone",
+    question: "In the context of Antimatter, what role does PoliCloud play?",
+    options: ["It forms the physical backbone of the infrastructure", "It acts as a browser extension", "It is a marketing agency", "It is the name of the CEO's personal computer"],
+    correctAnswer: "It forms the physical backbone of the infrastructure",
+    penaltyType: "bandwidth"
+  },
+  {
     id: "am_cpu",
     question: "Which component is considered the 'brain' responsible for executing the basic instructions of a server?",
     options: ["GPU", "CPU", "RAM", "SSD"],
     correctAnswer: "CPU",
     penaltyType: "cpu" 
+  },
+  {
+    id: "hivenet_storage",
+    question: "Which Hivenet product is primarily intended for personal cloud storage?",
+    options: ["Compute", "Send", "Store", "Archive"],
+    correctAnswer: "Store",
+    penaltyType: "ram" // Linked to node-based storage
+  },
+  {
+    id: "hivenet_compute",
+    question: "What is the primary focus of the Hivenet 'Compute' product?",
+    options: ["File sharing", "Distributed storage", "GPU/AI workloads", "Instant messaging"],
+    correctAnswer: "GPU/AI workloads",
+    penaltyType: "gpu"
+  },
+  {
+    id: "hivenet_security",
+    question: "What does Hivenet call the optional layer of protection that makes files unrecoverable if lost?",
+    options: ["Master Key", "Encryption Passphrase", "Unique Password", "Security Token"],
+    correctAnswer: "Encryption Passphrase",
+    penaltyType: "cpu"
+  },
+  {
+    id: "hivenet_diff",
+    question: "What is the primary difference between a centralized cloud and Hivenet's distributed cloud?",
+    options: ["Hivenet uses blockchains", "Hivenet does not rely on large centralized data centers", "Hivenet is a Web3 company", "Hivenet only works locally"],
+    correctAnswer: "Hivenet does not rely on large centralized data centers",
+    penaltyType: "bandwidth" // Linked to data transfer
+  },
+  {
+    id: "hivenet_nature",
+    question: "Does Hivenet define itself as a Web3 company using tokens and blockchain technology?",
+    options: ["Yes, it is their core business", "No, they focus on real infrastructure", "Only for payments", "Yes, for security"],
+    correctAnswer: "No, they focus on real infrastructure",
+    penaltyType: "bandwith"
+  },
+  {
+    id: "hivenet_performance",
+    question: "Why does Hivenet's distributed model often provide better performance?",
+    options: ["It uses larger servers", "It retrieves data from multiple sources simultaneously", "It removes encryption", "It uses private fiber connections"],
+    correctAnswer: "It retrieves data from multiple sources simultaneously",
+    penaltyType: "cpu"
   },
   {
     id: "am_ram",
@@ -44,7 +130,7 @@ const ANTIMATTER_QUESTIONS = [
     question: "In distributed computing (HPC), which collective communication operation synchronizes and reduces data across all nodes?",
     options: ["All-Gather", "Broadcast", "All-Reduce", "Scatter"],
     correctAnswer: "All-Reduce",
-    penaltyType: "bandwidth"
+    penaltyType: "gpu"
   },
   {
     id: "am_node",
