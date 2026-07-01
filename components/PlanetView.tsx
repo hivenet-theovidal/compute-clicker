@@ -61,8 +61,8 @@ interface Props {
 export default function PlanetView({ state, activeRegion, onCLick, onSelectRegion }: Props) {
   const eps = totalEps(state);
 
-  const handlePlanetClick = useCallback(
-    (e: React.MouseEvent) => onCLick(e.clientX, e.clientY),
+  const handleClickBtn = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => onCLick(e.clientX, e.clientY),
     [onCLick],
   );
 
@@ -80,7 +80,7 @@ export default function PlanetView({ state, activeRegion, onCLick, onSelectRegio
   const p = (v: number) => Math.round(C + v * S);
 
   return (
-    <div className="flex flex-col items-center gap-4 select-none w-full">
+    <div className="flex flex-col items-center gap-4 select-none w-full pt-6 pb-4">
       {/* Balance + eps */}
       <div className="text-center">
         <motion.div
@@ -97,9 +97,8 @@ export default function PlanetView({ state, activeRegion, onCLick, onSelectRegio
 
       {/* Planet canvas */}
       <div
-        className="relative cursor-pointer flex-shrink-0"
+        className="relative flex-shrink-0"
         style={{ width: CONTAINER, height: CONTAINER }}
-        onClick={handlePlanetClick}
       >
         {/* ── Planet SVG ── */}
         <svg
@@ -359,12 +358,36 @@ export default function PlanetView({ state, activeRegion, onCLick, onSelectRegio
         })}
       </div>
 
-      {/* Subtitle */}
-      <div className="text-slate-600 text-sm text-center -mt-2">
-        +{formatEuros(state.clickValue)} per click ·{' '}
-        <span style={{ color: REGIONS[activeRegion].color }}>
+      {/* ── Dedicated click button ── */}
+      <motion.button
+        whileTap={{ scale: 0.93 }}
+        onClick={handleClickBtn}
+        className="relative flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-slate-900 focus:outline-none overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #facc15, #f97316)',
+          boxShadow: '0 0 30px #facc1540, 0 4px 20px #00000060',
+        }}
+        aria-label="Click to earn"
+      >
+        {/* Shimmer sweep */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%)' }}
+          animate={{ x: ['-100%', '200%'] }}
+          transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.5, ease: 'easeInOut' }}
+        />
+        <img src="/assets/click-icon.svg" alt="" width={24} height={24} className="drop-shadow" />
+        <span className="text-lg tracking-wide">DEPLOY</span>
+        <span className="text-sm font-normal opacity-80">+{formatEuros(state.clickValue)}</span>
+      </motion.button>
+
+      {/* Active region hint */}
+      <div className="text-slate-600 text-xs text-center -mt-2">
+        région active :{' '}
+        <span className="font-semibold" style={{ color: REGIONS[activeRegion].color }}>
           {REGIONS[activeRegion].name}
-        </span>{' selected'}
+        </span>
+        {' — cliquer sur un marqueur pour changer'}
       </div>
     </div>
   );

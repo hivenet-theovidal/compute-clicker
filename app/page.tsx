@@ -31,6 +31,59 @@ const TICK_INTERVAL_MS = 100;
 
 let floatingIdCounter = 0;
 
+// Natural size of PlanetView (px) — must match actual render dimensions
+const PLANET_VIEW_W = 680;
+const PLANET_VIEW_H = 980;
+
+function PlanetPanel({
+  gameState, activeRegion, onCLick, onSelectRegion,
+}: {
+  gameState: FullGameState;
+  activeRegion: RegionId;
+  onCLick: (x: number, y: number) => void;
+  onSelectRegion: (id: RegionId) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setScale(Math.min(1, width / PLANET_VIEW_W, height / PLANET_VIEW_H));
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} className="flex-1 relative overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.1 }}
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          width: PLANET_VIEW_W,
+          height: PLANET_VIEW_H,
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: 'center center',
+        }}
+      >
+        <PlanetView
+          state={gameState}
+          activeRegion={activeRegion}
+          onCLick={onCLick}
+          onSelectRegion={onSelectRegion}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [identified, setIdentified] = useState(false);
   const [playerName, setPlayerName] = useState('');
@@ -174,21 +227,13 @@ export default function Home() {
 
         {/* Main layout */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Left: Click area */}
-          <div className="flex-1 flex items-center justify-center p-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <PlanetView
-                state={gameState}
-                activeRegion={activeRegion}
-                onCLick={handleClick}
-                onSelectRegion={setActiveRegion}
-              />
-            </motion.div>
-          </div>
+          {/* Left: Planet + click button — responsive scale */}
+          <PlanetPanel
+            gameState={gameState}
+            activeRegion={activeRegion}
+            onCLick={handleClick}
+            onSelectRegion={setActiveRegion}
+          />
 
           {/* Center: Shop */}
           <div className="w-[360px] border-l border-r border-slate-800 flex flex-col overflow-hidden">

@@ -21,9 +21,8 @@ export default function FloatingNumbers({ numbers }: Props) {
         {numbers.map((n) => (
           <motion.div
             key={n.id}
-            initial={{ opacity: 1, y: n.y, x: n.x, scale: 1 }}
-            animate={{ opacity: 0, y: n.y - 80, scale: 1.2 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 1, y: 0, scale: 1 }}
+            animate={{ opacity: 0, y: -80, scale: 1.2 }}
             transition={{ duration: 0.9, ease: 'easeOut' }}
             className="absolute text-yellow-400 font-bold text-lg select-none drop-shadow-lg"
             style={{ left: n.x, top: n.y }}
