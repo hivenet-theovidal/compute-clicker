@@ -108,10 +108,10 @@ export default function UpgradeNode({
             <img
               src={`/images/${COMPONENT_IMAGE[type]}.png`}
               alt={def.name}
-              width={72}
-              height={72}
+              width={90}
+              height={90}
               draggable={false}
-              className="pointer-events-none absolute left-1/2 bottom-0 -translate-x-1/2 object-contain"
+              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain"
               style={locked
                 ? { filter: 'grayscale(1) brightness(0.6)', opacity: 0.6 }
                 : { filter: `drop-shadow(0 5px 7px rgba(0,0,0,0.6)) drop-shadow(0 0 11px ${meta.color}cc)` }}
@@ -124,7 +124,7 @@ export default function UpgradeNode({
           <div className="flex items-center gap-2">
             <span className={`truncate text-sm font-bold ${locked ? 'text-muted' : 'text-fg'}`}>{def.name}</span>
             {owned > 0 && (
-              <span className="rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums" style={{ background: `${meta.color}22`, color: meta.color }}>
+              <span className="rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums" style={{ background: '#ffb4571f', color: '#ffc879', boxShadow: 'inset 0 0 0 1px #ffb45744' }}>
                 Lv {owned >= 1000 ? `${(owned / 1000).toFixed(1)}k` : owned}
               </span>
             )}

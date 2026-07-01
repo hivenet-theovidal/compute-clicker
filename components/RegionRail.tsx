@@ -73,8 +73,8 @@ export default function RegionRail({ state, activeRegion, onSelectRegion }: Prop
             </div>
             {rs.unlocked && total > 0 && (
               <span
-                className="ml-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-black"
-                style={{ background: def.color }}
+                className="ml-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                style={{ background: 'linear-gradient(160deg, #ffd98a, #ffb43f)', color: '#3a2200' }}
               >
                 {total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total}
               </span>

@@ -96,7 +96,7 @@ export default function TechTree({ state, activeRegion, onBuy }: Props) {
               return (
                 <div key={type}>
                   {i > 0 && (
-                    <div className="ml-[32px] my-0.5 h-3.5 w-[3px] rounded-full overflow-hidden" style={{ color: prevMet ? `${prevColor}` : 'rgba(255,255,255,0.12)' }}>
+                    <div className="ml-[33px] my-0.5 h-4 w-[3px] rounded-full overflow-hidden" style={{ color: prevMet ? `${prevColor}` : 'rgba(255,255,255,0.12)' }}>
                       <div className={prevMet ? 'flow h-full w-full' : 'h-full w-full'} style={{ opacity: prevMet ? 0.8 : 0.4 }} />
                     </div>
                   )}
@@ -123,8 +123,8 @@ export default function TechTree({ state, activeRegion, onBuy }: Props) {
             <img
               src={`/images/countries/${REGION_IMAGE[activeRegion]}.png`}
               alt={def.name}
-              width={78}
-              height={78}
+              width={50}
+              height={50}
               draggable={false}
               className="object-contain"
               style={{ filter: `grayscale(0.65) brightness(0.85) drop-shadow(0 0 16px ${def.color}77)` }}

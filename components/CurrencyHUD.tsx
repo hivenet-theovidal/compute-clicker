@@ -103,36 +103,26 @@ export default function CurrencyHUD({ balance, eps }: Props) {
       </div>
 
       {/* label pill */}
-      <div
+      {/* <div
         className="mb-2 rounded-full px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.35em]"
         style={{ color: '#ffcf87', background: 'rgba(255,154,51,0.08)', boxShadow: 'inset 0 0 0 1px rgba(255,154,51,0.22)' }}
       >
-        Empire Balance
-      </div>
+        Balance
+      </div> */}
 
       {/* coin + rolling gold balance */}
       <div className="flex items-center gap-3" style={{ perspective: 420 }}>
-        <span
-          key={coinKey}
-          className="coin-flip grid place-items-center rounded-full font-black text-black"
-          style={{
-            width: 46, height: 46, fontSize: 24,
-            background: 'radial-gradient(circle at 35% 28%, #ffe9b0, #ffb43f 55%, #db7d0c)',
-            boxShadow: '0 0 22px -4px #ffb43f, inset 0 -3px 6px -2px #9c5606, inset 0 2px 3px #fff3d0',
-          }}
-        >
-          €
-        </span>
+       
         <Ticker text={numText} className="text-6xl md:text-7xl font-black tabular-nums leading-none" />
       </div>
 
       {/* income chip */}
       <div
-        className="mt-2.5 flex items-center gap-2 rounded-full px-3 py-1 text-xs"
+        className="mt-2.5 flex items-center gap-2 rounded-sm px-3 py-2 text-xs"
         style={{ background: 'rgba(87,130,255,0.1)', boxShadow: 'inset 0 0 0 1px rgba(87,130,255,0.24)' }}
       >
         <span className="glow-blue font-bold tabular-nums" style={{ color: '#93b4ff' }}>▲ {formatEuros(eps)}/s</span>
-        <span className="text-faint">passive income</span>
+        <span className="text-faint">Passive Income</span>
       </div>
     </div>
   );

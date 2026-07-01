@@ -21,6 +21,8 @@ interface Props {
   playerId: string;
   playerTotal: number;
   playerBalance: number;
+  eps: number;
+  clickValue: number;
   onAttackLaunched?: () => void;
 }
 
@@ -30,7 +32,21 @@ function attackCost(playerTotal: number, targetTotal: number): number {
   return Math.max(10, (playerTotal + targetTotal) * 0.005);
 }
 
-export default function LeaderboardWindow({ playerName, playerId, playerTotal, playerBalance, onAttackLaunched }: Props) {
+function StatRow({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="grid place-items-center rounded-lg text-sm" style={{ width: 26, height: 26, background: `${color}1f`, boxShadow: `inset 0 0 12px -4px ${color}` }}>
+        {icon}
+      </span>
+      <div className="leading-tight">
+        <div className="text-[9px] uppercase tracking-[0.15em] text-dim">{label}</div>
+        <div className="font-mono text-xs font-semibold tabular-nums" style={{ color }}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+export default function LeaderboardWindow({ playerName, playerId, playerTotal, playerBalance, eps, clickValue, onAttackLaunched }: Props) {
   const [open, setOpen] = useState(true);
   const { data } = useSWR<{ leaderboard: LeaderboardEntry[] }>('/api/leaderboard', fetcher, { refreshInterval: 5000 });
   const { data: attacksData, mutate: mutateAttacks } = useSWR<AttacksData>('/api/attacks', fetcher, { refreshInterval: 5000 });
@@ -92,11 +108,21 @@ export default function LeaderboardWindow({ playerName, playerId, playerTotal, p
   };
 
   return (
-    <div className="glass rounded-2xl w-64 overflow-hidden">
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-4 py-2.5">
-        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-fg">
-          <span className="text-sm">🏆</span> Top Empires
-        </span>
+    <div className="glass rounded-2xl w-[269px] relative">
+      {/* medal emblem bursting out of the top — with a soft live glow */}
+      <span
+        className="glow-pulse pointer-events-none absolute rounded-full"
+        style={{ left: 18, top: -42, width: 72, height: 72, background: 'radial-gradient(circle, #ffcf6a66, transparent 68%)' }}
+      />
+      <img
+        src="/images/medal.png"
+        alt=""
+        draggable={false}
+        className="medal-live pointer-events-none absolute z-10 object-contain"
+        style={{ width: 96, height: 96, left: 4, top: -56, filter: 'drop-shadow(0 6px 11px rgba(0,0,0,0.55))' }}
+      />
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between py-2.5 pr-4 pl-[102px]">
+        <span className="text-xs font-bold uppercase tracking-[0.2em] text-fg">Top Empires</span>
         <motion.span animate={{ rotate: open ? 0 : -90 }} className="text-dim text-xs">▾</motion.span>
       </button>
 
@@ -138,6 +164,13 @@ export default function LeaderboardWindow({ playerName, playerId, playerTotal, p
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* merged stats footer */}
+      <div className="space-y-2 px-3 pb-3 pt-2.5" style={{ borderTop: '1px solid var(--gray-a3)' }}>
+        <StatRow icon="🌐" label="Total empire" value={formatEuros(playerTotal)} color="#ffa23d" />
+        <StatRow icon="⚡" label="Income / s" value={formatEuros(eps)} color="#93b4ff" />
+        <StatRow icon="👆" label="Per deploy" value={formatEuros(clickValue)} color="#eeeef0" />
+      </div>
 
       {/* Sabotage confirmation */}
       <Dialog.Root open={!!confirmTarget} onOpenChange={(o) => { if (!o) setConfirmTarget(null); }}>

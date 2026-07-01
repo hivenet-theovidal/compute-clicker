@@ -317,11 +317,11 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
                             style={{ filter: `drop-shadow(0 0 4px ${meta.color}bb)` }}
                           />
                           <div
-                            className="absolute -top-1.5 -right-1.5 grid place-items-center rounded-full font-bold text-black"
+                            className="absolute -top-1.5 -right-1.5 grid place-items-center rounded-full font-bold"
                             style={{
                               minWidth: 15, height: 15, paddingInline: 2,
-                              background: def.color, fontSize: count >= 100 ? 7 : 9,
-                              boxShadow: `0 0 6px ${def.color}`,
+                              background: 'linear-gradient(160deg, #ffd98a, #ffb43f)', color: '#3a2200', fontSize: count >= 100 ? 7 : 9,
+                              boxShadow: '0 0 6px #ffb43faa',
                             }}
                           >
                             {count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count}

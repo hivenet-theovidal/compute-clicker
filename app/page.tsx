@@ -11,7 +11,6 @@ import DeployButton from '@/components/DeployButton';
 import RegionRail from '@/components/RegionRail';
 import TechTree from '@/components/TechTree';
 import LeaderboardWindow from '@/components/LeaderboardWindow';
-import StatsWidget from '@/components/StatsWidget';
 import FloatingNumbers, { type FloatingNumber } from '@/components/FloatingNumbers';
 
 import {
@@ -239,8 +238,8 @@ export default function Home() {
         */}
 
         {/* Currency HUD + region selector — top row */}
-        <div className="absolute left-1/2 top-6 -translate-x-1/2 flex items-center gap-8">
-          <div className="flex flex-col items-center min-w-[340px]">
+        <div className="absolute left-0 right-0 top-6 flex items-center justify-between px-8">
+          <div className="flex flex-col items-start">
             <CurrencyHUD balance={gameState.balance} eps={eps} />
             {attacked && (
               <div
@@ -254,22 +253,19 @@ export default function Home() {
           <RegionRail state={gameState} activeRegion={activeRegion} onSelectRegion={setActiveRegion} />
         </div>
 
-        {/* Leaderboard (with sabotage) */}
+        {/* Player HUD — leaderboard + stats merged, bottom left */}
         {identified && (
-          <div className="absolute left-5 top-48">
+          <div className="absolute left-5 bottom-5">
             <LeaderboardWindow
               playerName={playerName}
               playerId={playerId}
               playerTotal={gameState.totalEarned}
               playerBalance={gameState.balance}
+              eps={eps}
+              clickValue={gameState.clickValue}
             />
           </div>
         )}
-
-        {/* Stats */}
-        <div className="absolute left-5 bottom-5">
-          <StatsWidget totalEarned={gameState.totalEarned} eps={eps} clickValue={gameState.clickValue} />
-        </div>
 
         {/* Deploy — bottom center */}
         <div className="absolute left-1/2 bottom-10 -translate-x-1/2">
