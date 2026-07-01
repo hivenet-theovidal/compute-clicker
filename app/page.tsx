@@ -385,9 +385,9 @@ export default function Home() {
                       <span className="text-2xl">⚠️</span>
                       <div>
                         <h3 className="text-yellow-500 font-bold text-sm tracking-widest uppercase">
-                          Incident Système
+                          Incident System
                         </h3>
-                        <p className="text-slate-400 text-xs">Le temps est suspendu.</p>
+                        <p className="text-slate-400 text-xs">Time Out.</p>
                       </div>
                     </div>
 
@@ -408,7 +408,7 @@ export default function Home() {
                     </div>
 
                     <div className="mt-5 text-xs font-mono text-center text-red-400 bg-red-950/30 py-2 rounded border border-red-900/50">
-                      Risque : -15% de vos {activeQcm.penaltyType.toUpperCase()}
+                      Risk : -15% of {activeQcm.penaltyType.toUpperCase()}
                     </div>
                   </>
                 )}
@@ -421,7 +421,7 @@ export default function Home() {
                       Correct !
                     </h3>
                     <p className="text-slate-300 text-sm">
-                      L'infrastructure est en sécurité.<br/>Reprise du système...
+                      Infrastructure is safe ! 
                     </p>
                   </div>
                 )}
@@ -431,14 +431,14 @@ export default function Home() {
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <span className="text-5xl mb-4">🔥</span>
                     <h3 className="text-red-500 font-bold text-xl uppercase tracking-widest mb-2">
-                      Faux !
+                      False !
                     </h3>
                     <p className="text-slate-300 text-sm mb-4">
-                      La bonne réponse était :<br/>
+                      The good answer was :<br/>
                       <span className="text-white font-bold">{activeQcm.correctAnswer}</span>
                     </p>
                     <div className="bg-red-950/50 border border-red-900 text-red-400 px-4 py-2 rounded text-sm font-mono uppercase">
-                      Pénalité : -15% {activeQcm.penaltyType}
+                      Pénalty: -15% {activeQcm.penaltyType}
                     </div>
                   </div>
                 )}
