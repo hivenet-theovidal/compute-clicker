@@ -311,8 +311,8 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
                           <img
                             src={`/images/${COMPONENT_IMAGE[type]}.png`}
                             alt={COMPONENTS[type].name}
-                            width={Math.round(TILE * 0.74)}
-                            height={Math.round(TILE * 0.74)}
+                            width={Math.round(TILE * 0.94)}
+                            height={Math.round(TILE * 0.94)}
                             draggable={false}
                             className="object-contain"
                             style={{ filter: `drop-shadow(0 0 4px ${meta.color}bb)` }}
