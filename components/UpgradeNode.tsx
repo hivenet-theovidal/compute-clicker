@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { COMPONENTS, formatEuros, type ComponentType } from '@/lib/game-engine';
+import { numFont } from '@/lib/fonts';
 
 /** Each upgrade gets its own neon personality. */
 export const COMPONENT_META: Record<ComponentType, { color: string; tag: string }> = {
@@ -124,7 +125,7 @@ export default function UpgradeNode({
           <div className="flex items-center gap-2">
             <span className={`truncate text-sm font-bold ${locked ? 'text-muted' : 'text-fg'}`}>{def.name}</span>
             {owned > 0 && (
-              <span className="rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums" style={{ background: '#ffb4571f', color: '#ffc879', boxShadow: 'inset 0 0 0 1px #ffb45744' }}>
+              <span className={`${numFont.className} rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums`} style={{ background: '#ffb4571f', color: '#ffc879', boxShadow: 'inset 0 0 0 1px #ffb45744' }}>
                 Lv {owned >= 1000 ? `${(owned / 1000).toFixed(1)}k` : owned}
               </span>
             )}
@@ -152,7 +153,7 @@ export default function UpgradeNode({
             </div>
           ) : (
             <div className="mt-0.5 flex items-center gap-2 text-[11px]">
-              <span className="font-semibold" style={{ color: '#93b4ff' }}>+{formatEuros(perUnit)}/s each</span>
+              <span className={`${numFont.className} font-semibold`} style={{ color: '#93b4ff' }}>+{formatEuros(perUnit)}/s each</span>
               <span className="text-faint">·</span>
               <span className="text-dim">{meta.tag}</span>
             </div>
@@ -172,7 +173,7 @@ export default function UpgradeNode({
                 />
               </div>
               <span
-                className="whitespace-nowrap font-mono text-xs font-bold tabular-nums"
+                className={`${numFont.className} whitespace-nowrap text-xs font-bold tabular-nums`}
                 style={{ color: canAfford ? '#ffb257' : '#8a8f9e' }}
               >
                 {formatEuros(cost)}

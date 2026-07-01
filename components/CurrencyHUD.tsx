@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Orbitron } from 'next/font/google';
 import { formatEuros } from '@/lib/game-engine';
-
-// Dedicated numeric font for the balance — heavy weights + uniform tabular figures.
-const numFont = Orbitron({ subsets: ['latin'] });
+import { numFont } from '@/lib/fonts';
 
 interface Props {
   balance: number;
@@ -116,7 +113,7 @@ export default function CurrencyHUD({ balance, eps }: Props) {
 
       {/* coin + rolling gold balance */}
       <div className="flex items-center gap-3" style={{ perspective: 420 }}>
-        <Ticker text={numText} className={`${numFont.className} text-6xl md:text-7xl font-black tabular-nums leading-none`} />
+        <Ticker text={numText} className={`${numFont.className} text-[51px] md:text-[61px] font-black tabular-nums leading-none`} />
       </div>
 
       {/* passive income — playful badge */}

@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AnimatePresence, motion } from 'framer-motion';
 import { formatEuros } from '@/lib/game-engine';
+import { numFont } from '@/lib/fonts';
 
 interface LeaderboardEntry {
   player_id: string;
@@ -40,7 +41,7 @@ function StatRow({ icon, label, value, color }: { icon: string; label: string; v
       </span>
       <div className="leading-tight">
         <div className="text-[9px] uppercase tracking-[0.15em] text-dim">{label}</div>
-        <div className="font-mono text-xs font-semibold tabular-nums" style={{ color }}>{value}</div>
+        <div className={`${numFont.className} text-xs font-semibold tabular-nums`} style={{ color }}>{value}</div>
       </div>
     </div>
   );
@@ -155,7 +156,7 @@ export default function LeaderboardWindow({ playerName, playerId, playerTotal, p
                     <span className={`flex-1 truncate font-semibold ${isPlayer ? 'text-accent-fg' : 'text-muted'}`}>
                       {entry.name}
                     </span>
-                    <span className="font-mono tabular-nums text-info-fg">{formatEuros(entry.total_earned)}</span>
+                    <span className={`${numFont.className} tabular-nums text-info-fg`}>{formatEuros(entry.total_earned)}</span>
                     <span className="w-6 text-right">{renderAttackButton(entry)}</span>
                   </div>
                 );

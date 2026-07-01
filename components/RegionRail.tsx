@@ -9,6 +9,7 @@ import {
   type ComponentType,
   type FullGameState,
 } from '@/lib/game-engine';
+import { numFont } from '@/lib/fonts';
 
 const REGION_IMAGE: Record<RegionId, string> = { uae: 'uae', eu: 'france', us: 'usa', sea: 'asia', brazil: 'brazil' };
 const COMPONENT_ORDER: ComponentType[] = ['cpu', 'ram', 'gpu', 'power', 'bandwidth', 'container'];
@@ -67,13 +68,13 @@ export default function RegionRail({ state, activeRegion, onSelectRegion }: Prop
               >
                 {def.name}
               </div>
-              <div className="text-[11px] font-mono tabular-nums whitespace-nowrap" style={{ color: active ? def.color : 'var(--gray-10)' }}>
+              <div className={`${numFont.className} text-[11px] tabular-nums whitespace-nowrap`} style={{ color: active ? def.color : 'var(--gray-10)' }}>
                 {rs.unlocked ? `${formatEuros(eps)}/s` : `🔒 ${formatEuros(def.unlockCost)}`}
               </div>
             </div>
             {rs.unlocked && total > 0 && (
               <span
-                className="ml-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                className={`${numFont.className} ml-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold`}
                 style={{ background: 'linear-gradient(160deg, #ffd98a, #ffb43f)', color: '#3a2200' }}
               >
                 {total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total}

@@ -14,6 +14,7 @@ import {
   type FullGameState,
 } from '@/lib/game-engine';
 import UpgradeNode, { COMPONENT_META } from './UpgradeNode';
+import { numFont } from '@/lib/fonts';
 
 const COMPONENT_ORDER: ComponentType[] = ['cpu', 'ram', 'gpu', 'power', 'bandwidth', 'container'];
 const REGION_IMAGE: Record<RegionId, string> = { uae: 'uae', eu: 'france', us: 'usa', sea: 'asia', brazil: 'brazil' };
@@ -89,7 +90,7 @@ export default function TechTree({ state, activeRegion, onBuy }: Props) {
               </div>
             </div>
             <div className="text-right">
-              <div className="font-mono text-sm font-bold tabular-nums" style={{ color: def.color }}>{formatEuros(eps)}/s</div>
+              <div className={`${numFont.className} text-sm font-bold tabular-nums`} style={{ color: def.color }}>{formatEuros(eps)}/s</div>
               <div className="text-[10px] text-dim">region output</div>
             </div>
           </div>
@@ -156,7 +157,7 @@ export default function TechTree({ state, activeRegion, onBuy }: Props) {
                 }}
               />
             </div>
-            <div className="mt-1.5 flex justify-between text-[10px] font-mono tabular-nums">
+            <div className={`${numFont.className} mt-1.5 flex justify-between text-[10px] tabular-nums`}>
               <span className="text-muted">{formatEuros(state.totalEarned)}</span>
               <span style={{ color: def.color }}>{formatEuros(def.unlockCost)}</span>
             </div>
