@@ -64,7 +64,7 @@ export default function UpgradeNode({
     <button
       onClick={() => buyable && onBuy()}
       disabled={!buyable}
-      className={`group relative w-full overflow-hidden rounded-2xl text-left transition-transform ${buyable ? 'node-bob' : ''}`}
+      className={`group relative w-full rounded-2xl text-left transition-transform ${buyable ? 'node-bob' : ''}`}
       style={{
         background: locked
           ? 'linear-gradient(160deg, rgba(30,40,66,0.5), rgba(16,22,40,0.4))'
@@ -77,18 +77,17 @@ export default function UpgradeNode({
         cursor: buyable ? 'pointer' : 'default',
       }}
     >
-      {/* sheen sweep for affordable */}
-      {buyable && (
-        <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+      {/* clip layer — keeps sheen/scanline inside the rounded card while the icon bursts out */}
+      <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+        {buyable && (
           <span className="sheen absolute top-0 left-0 h-full w-1/3" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,210,150,0.35), transparent)' }} />
-        </span>
-      )}
-      {/* hologram scanline for locked */}
-      {locked && (
-        <span className="pointer-events-none absolute inset-x-0 h-6 opacity-40" style={{ background: `linear-gradient(${meta.color}00, ${meta.color}55, ${meta.color}00)` }}>
-          <span className="scanline block h-full w-full" />
-        </span>
-      )}
+        )}
+        {locked && (
+          <span className="absolute inset-x-0 top-0 h-6 opacity-40" style={{ background: `linear-gradient(${meta.color}00, ${meta.color}55, ${meta.color}00)` }}>
+            <span className="scanline block h-full w-full" />
+          </span>
+        )}
+      </span>
 
       <div className={`relative flex items-center gap-3 p-2.5 ${locked ? 'holo-flicker' : ''}`}>
         {/* Icon machine */}
@@ -105,17 +104,17 @@ export default function UpgradeNode({
               }}
             />
             {buyable && <span className="ring-burst absolute inset-0 rounded-xl" style={{ boxShadow: `0 0 0 2px #ff9a33` }} />}
-            {/* artwork sits proud of the frame */}
+            {/* artwork bursts up out of the pedestal */}
             <img
               src={`/images/${COMPONENT_IMAGE[type]}.png`}
               alt={def.name}
-              width={56}
-              height={56}
+              width={72}
+              height={72}
               draggable={false}
-              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain"
+              className="pointer-events-none absolute left-1/2 bottom-0 -translate-x-1/2 object-contain"
               style={locked
                 ? { filter: 'grayscale(1) brightness(0.6)', opacity: 0.6 }
-                : { filter: `drop-shadow(0 3px 5px rgba(0,0,0,0.55)) drop-shadow(0 0 8px ${meta.color}bb)` }}
+                : { filter: `drop-shadow(0 5px 7px rgba(0,0,0,0.6)) drop-shadow(0 0 11px ${meta.color}cc)` }}
             />
           </div>
         </div>

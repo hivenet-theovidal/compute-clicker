@@ -229,15 +229,6 @@ export default function Home() {
           <PlanetView state={gameState} activeRegion={activeRegion} onSelectRegion={setActiveRegion} />
         </div>
 
-        {/* Brand */}
-        <div className="absolute left-5 top-4 flex items-center gap-2">
-          <span className="grid place-items-center rounded-xl text-lg" style={{ width: 34, height: 34, background: 'linear-gradient(140deg,#ff9a33,#f36f14)', boxShadow: '0 0 18px -4px #ff9a33' }}>🛰️</span>
-          <div className="leading-none">
-            <div className="font-black tracking-tight glow-orange" style={{ color: '#ffb257' }}>HiveNet</div>
-            <div className="text-[10px] uppercase tracking-[0.25em] text-dim">Cloud Empire</div>
-          </div>
-        </div>
-
         {/* Player badge — commented out for now
         {identified && (
           <div className="glass absolute right-5 top-4 rounded-full px-4 py-2 text-xs">
