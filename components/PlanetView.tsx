@@ -255,7 +255,7 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
       {/* atmosphere glow */}
       <div
         className="pointer-events-none absolute rounded-full"
-        style={{ inset: -50, boxShadow: '0 0 97px 8px #2b6fff1c, inset 0 0 73px #0d3a661a' }}
+        style={{ inset: -10, boxShadow: '0 0 97px 8px #2b6fff1c, inset 0 0 73px #0d3a661a' }}
       />
       <canvas
         ref={canvasRef}
