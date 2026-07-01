@@ -321,3 +321,115 @@ body {
     }
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Game UI — bloom, glass, holograms, particles, juice
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Floating glass surfaces (no hard enterprise borders) */
+.glass {
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var(--blue-9) 8%, transparent), transparent 60%),
+    linear-gradient(160deg, var(--gray-a3), var(--gray-a2));
+  backdrop-filter: blur(16px) saturate(1.1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  border: 1px solid var(--gray-a4);
+  box-shadow:
+    inset 0 1px 0 var(--gray-a5),
+    inset 0 0 30px -18px var(--blue-9),
+    0 24px 70px -30px rgba(0, 0, 0, 0.9);
+}
+.glass-orange {
+  box-shadow:
+    inset 0 1px 0 var(--gray-a5),
+    inset 0 0 34px -18px var(--orange-9),
+    0 0 0 1px color-mix(in oklab, var(--orange-9) 22%, transparent),
+    0 24px 70px -30px rgba(0, 0, 0, 0.9);
+}
+
+/* Bloom text */
+.glow-orange { text-shadow: 0 0 22px rgba(255, 154, 51, 0.55), 0 0 60px rgba(255, 154, 51, 0.25); }
+.glow-blue   { text-shadow: 0 0 18px rgba(87, 130, 255, 0.6), 0 0 44px rgba(87, 130, 255, 0.28); }
+
+/* Twinkling stars / drifting nebula */
+@keyframes twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+@keyframes nebula-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(-30px, 18px, 0) scale(1.06); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.nebula { animation: nebula-drift 26s ease-in-out infinite; }
+
+/* Slow "camera breathing" for the hero globe */
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.018); } }
+.breathe { animation: breathe 8s ease-in-out infinite; }
+
+/* Hologram flicker + scanline for locked / futuristic panels */
+@keyframes holo-flicker {
+  0%, 100% { opacity: 0.62; }
+  46% { opacity: 0.55; } 47% { opacity: 0.85; } 48% { opacity: 0.4; } 49% { opacity: 0.7; }
+  92% { opacity: 0.5; } 93% { opacity: 0.78; }
+}
+.holo-flicker { animation: holo-flicker 4.5s linear infinite; }
+@keyframes scanline { 0% { transform: translateY(-120%); } 100% { transform: translateY(420%); } }
+.scanline { animation: scanline 3.2s linear infinite; }
+
+/* Pulsing glow ring (datacenter heartbeat) */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+.glow-pulse { animation: glow-pulse 2.4s ease-in-out infinite; }
+
+/* Purchase juice */
+@keyframes node-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.16) translateY(-3px); }
+  60% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+.node-pop { animation: node-pop 0.5s cubic-bezier(0.2, 1.5, 0.4, 1); }
+
+@keyframes ring-burst {
+  0% { transform: scale(0.55); opacity: 0.85; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+.ring-burst { animation: ring-burst 0.65s ease-out forwards; }
+
+@keyframes spark-fly {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+}
+.spark { animation: spark-fly var(--dur, 0.6s) ease-out forwards; }
+
+@keyframes screen-flash {
+  0% { opacity: 0; } 12% { opacity: 0.5; } 100% { opacity: 0; }
+}
+.screen-flash { animation: screen-flash 0.5s ease-out forwards; }
+
+/* Sheen sweep for buttons / affordable nodes */
+@keyframes sheen { 0% { transform: translateX(-130%) skewX(-18deg); } 100% { transform: translateX(240%) skewX(-18deg); } }
+.sheen { animation: sheen 2.4s ease-in-out infinite; }
+
+/* Affordable node bob */
+@keyframes node-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.node-bob { animation: node-bob 2.6s ease-in-out infinite; }
+
+/* Number pop when currency ticks up a threshold */
+@keyframes num-pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.num-pop { animation: num-pop 0.3s ease-out; }
+
+/* Floating +€ combat text */
+@keyframes float-credit {
+  0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.8); }
+  16%  { opacity: 1; transform: translate(-50%, -6px) scale(1.12); }
+  100% { opacity: 0; transform: translate(-50%, -70px) scale(1); }
+}
+.float-credit { animation: float-credit 1s ease-out forwards; }
+
+/* Connector energy flow in the tech tree */
+@keyframes flow {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 -16px; }
+}
+.flow { background-image: repeating-linear-gradient(180deg, currentColor 0 4px, transparent 4px 12px); animation: flow 0.9s linear infinite; }

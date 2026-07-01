@@ -20,7 +20,7 @@ export default function Scoreboard({ playerName, playerTotal }: Props) {
   const { data } = useSWR<{ leaderboard: LeaderboardEntry[] }>(
     '/api/leaderboard',
     fetcher,
-    // { refreshInterval: 5000 }
+    { refreshInterval: 5000 }
   );
 
   const entries = data?.leaderboard ?? [];
