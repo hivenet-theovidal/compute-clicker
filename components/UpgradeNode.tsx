@@ -89,7 +89,7 @@ export default function UpgradeNode({
         )}
       </span>
 
-      <div className={`relative flex items-center gap-3 p-2.5 ${locked ? 'holo-flicker' : ''}`}>
+      <div className={`relative flex items-center gap-3 px-2.5 py-1.5 ${locked ? 'holo-flicker' : ''}`}>
         {/* Icon machine */}
         <div key={popKey} className={popKey ? 'node-pop' : ''}>
           <div className="relative" style={{ width: 46, height: 46 }}>

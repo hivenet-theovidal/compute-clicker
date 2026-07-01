@@ -237,19 +237,21 @@ export default function Home() {
         )}
         */}
 
-        {/* Currency HUD + region selector — top row */}
-        <div className="absolute left-0 right-0 top-6 flex items-center justify-between px-8">
-          <div className="flex flex-col items-start">
-            <CurrencyHUD balance={gameState.balance} eps={eps} />
-            {attacked && (
-              <div
-                className="glow-pulse mt-2 rounded-full px-3 py-1 text-[11px] font-bold"
-                style={{ background: 'rgba(255,59,59,0.14)', color: '#ff8a8a', boxShadow: 'inset 0 0 0 1px #ff5a5a55' }}
-              >
-                ⚠ UNDER SABOTAGE · −{Math.round(underAttack!.reduction * 100)}% · {attackSecs}s
-              </div>
-            )}
-          </div>
+        {/* Balance — top left */}
+        <div className="absolute left-8 top-6 flex flex-col items-start">
+          <CurrencyHUD balance={gameState.balance} eps={eps} />
+          {attacked && (
+            <div
+              className="glow-pulse mt-2 rounded-full px-3 py-1 text-[11px] font-bold"
+              style={{ background: 'rgba(255,59,59,0.14)', color: '#ff8a8a', boxShadow: 'inset 0 0 0 1px #ff5a5a55' }}
+            >
+              ⚠ UNDER SABOTAGE · −{Math.round(underAttack!.reduction * 100)}% · {attackSecs}s
+            </div>
+          )}
+        </div>
+
+        {/* Region selector — top center */}
+        <div className="absolute left-1/2 top-10 -translate-x-1/2">
           <RegionRail state={gameState} activeRegion={activeRegion} onSelectRegion={setActiveRegion} />
         </div>
 

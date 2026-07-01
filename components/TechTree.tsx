@@ -47,7 +47,7 @@ export default function TechTree({ state, activeRegion, onBuy }: Props) {
       initial={{ opacity: 0, y: 24, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 240, damping: 26 }}
-      className="glass rounded-3xl w-[356px] p-3.5"
+      className="glass rounded-3xl w-[356px] px-3.5 py-2.5"
     >
       {/* header */}
       <div className="mb-2.5 flex items-center gap-2">
@@ -96,7 +96,7 @@ export default function TechTree({ state, activeRegion, onBuy }: Props) {
               return (
                 <div key={type}>
                   {i > 0 && (
-                    <div className="ml-[33px] my-0.5 h-4 w-[3px] rounded-full overflow-hidden" style={{ color: prevMet ? `${prevColor}` : 'rgba(255,255,255,0.12)' }}>
+                    <div className="ml-[33px] h-2.5 w-[3px] rounded-full overflow-hidden" style={{ color: prevMet ? `${prevColor}` : 'rgba(255,255,255,0.12)' }}>
                       <div className={prevMet ? 'flow h-full w-full' : 'h-full w-full'} style={{ opacity: prevMet ? 0.8 : 0.4 }} />
                     </div>
                   )}

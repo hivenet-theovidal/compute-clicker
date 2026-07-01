@@ -112,7 +112,6 @@ export default function CurrencyHUD({ balance, eps }: Props) {
 
       {/* coin + rolling gold balance */}
       <div className="flex items-center gap-3" style={{ perspective: 420 }}>
-       
         <Ticker text={numText} className="text-6xl md:text-7xl font-black tabular-nums leading-none" />
       </div>
 
