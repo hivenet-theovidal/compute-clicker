@@ -41,9 +41,4 @@ yarn-error.log*
 next-env.d.ts
 hivenet.db-shm
 hivenet.db-wal
-hivenet.db-shm
-hivenet.db-wal
-hivenet.db-shm
-hivenet.db-wal
-hivenet.db-shm
-hivenet.db-wal
+
