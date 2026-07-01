@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Toast from '@radix-ui/react-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import NameModal from '@/components/NameModal';
 import PlanetView from '@/components/PlanetView';
@@ -36,12 +36,13 @@ const PLANET_VIEW_W = 680;
 const PLANET_VIEW_H = 980;
 
 function PlanetPanel({
-  gameState, activeRegion, onCLick, onSelectRegion,
+  gameState, activeRegion, onCLick, onSelectRegion, underAttack,
 }: {
   gameState: FullGameState;
   activeRegion: RegionId;
   onCLick: (x: number, y: number) => void;
   onSelectRegion: (id: RegionId) => void;
+  underAttack: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -79,14 +80,34 @@ function PlanetPanel({
           onCLick={onCLick}
           onSelectRegion={onSelectRegion}
         />
+        {underAttack && (
+          <motion.div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 60%, transparent 80%)' }}
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        )}
       </motion.div>
     </div>
   );
 }
 
+interface ActiveAttack {
+  attacker_id: string;
+  reduction: number;
+  expires_at: number;
+}
+
+interface AttacksResponse {
+  activeAttacks: ActiveAttack[];
+  myCooldowns: Record<string, number>;
+}
+
 export default function Home() {
   const [identified, setIdentified] = useState(false);
   const [playerName, setPlayerName] = useState('');
+  const [playerId, setPlayerId] = useState('');
   const [gameState, setGameState] = useState<FullGameState>(initialGameState());
   const [activeRegion, setActiveRegion] = useState<RegionId>('uae');
   const [floatingNums, setFloatingNums] = useState<FloatingNumber[]>([]);
@@ -94,6 +115,11 @@ export default function Home() {
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [toastVariant, setToastVariant] = useState<'default' | 'red' | 'green'>('default');
+
+  // Attack state
+  const [underAttack, setUnderAttack] = useState<{ reduction: number; expiresAt: number } | null>(null);
+  const knownAttackExpiresRef = useRef<number | null>(null);
 
   const stateRef = useRef(gameState);
   stateRef.current = gameState;
@@ -102,9 +128,10 @@ export default function Home() {
   useEffect(() => {
     fetch('/api/identify')
       .then((r) => r.json())
-      .then(async (data: { identified: boolean; name?: string }) => {
+      .then(async (data: { identified: boolean; name?: string; id?: string }) => {
         if (data.identified && data.name) {
           setPlayerName(data.name);
+          if (data.id) setPlayerId(data.id);
           setIdentified(true);
           const res = await fetch('/api/state');
           const json = await res.json() as { state: FullGameState };
@@ -116,11 +143,51 @@ export default function Home() {
       });
   }, []);
 
+  // ── Poll attacks every 5s ─────────────────────────────────────
+  useEffect(() => {
+    if (!identified) return;
+    const poll = async () => {
+      const res = await fetch('/api/attacks');
+      if (!res.ok) return;
+      const data = await res.json() as AttacksResponse;
+      const attacks = data.activeAttacks ?? [];
+
+      if (attacks.length > 0) {
+        const attack = attacks[0];
+        const isNew = knownAttackExpiresRef.current !== attack.expires_at;
+        knownAttackExpiresRef.current = attack.expires_at;
+        setUnderAttack({ reduction: attack.reduction, expiresAt: attack.expires_at });
+        if (isNew) {
+          setToastMsg('🔴 Sabotage detected — income -30% for 90s');
+          setToastVariant('red');
+          setToastOpen(true);
+        }
+      } else {
+        if (knownAttackExpiresRef.current !== null) {
+          knownAttackExpiresRef.current = null;
+          setUnderAttack(null);
+          setToastMsg('✅ Sabotage neutralized');
+          setToastVariant('green');
+          setToastOpen(true);
+        }
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => clearInterval(interval);
+  }, [identified]);
+
   // ── Game tick (passive income) ─────────────────────────────────
+  const underAttackRef = useRef(underAttack);
+  underAttackRef.current = underAttack;
+
   useEffect(() => {
     if (!identified) return;
     const interval = setInterval(() => {
-      setGameState((prev) => tick(prev, Date.now()));
+      const now = Date.now();
+      const attack = underAttackRef.current;
+      const multiplier = attack && attack.expiresAt > now ? 1 - attack.reduction : 1.0;
+      setGameState((prev) => tick(prev, now, multiplier));
     }, TICK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [identified]);
@@ -155,6 +222,7 @@ export default function Home() {
           if (attempt) {
             next = attempt;
             setToastMsg(`🌍 Region unlocked: ${REGIONS[rid].name}!`);
+            setToastVariant('default');
             setToastOpen(true);
           }
         }
@@ -181,6 +249,7 @@ export default function Home() {
       const newCount = next.regions[regionId].components[componentType];
       if (newCount === 1) {
         setToastMsg(`⚡ First ${componentType.toUpperCase()} in ${REGIONS[regionId].name}!`);
+        setToastVariant('default');
         setToastOpen(true);
       }
       return next;
@@ -201,7 +270,9 @@ export default function Home() {
     );
   }
 
-  const eps = totalEps(gameState);
+  const baseEps = totalEps(gameState);
+  const attackMultiplier = underAttack && underAttack.expiresAt > Date.now() ? 1 - underAttack.reduction : 1.0;
+  const eps = baseEps * attackMultiplier;
 
   return (
     <Toast.Provider swipeDirection="right">
@@ -233,6 +304,7 @@ export default function Home() {
             activeRegion={activeRegion}
             onCLick={handleClick}
             onSelectRegion={setActiveRegion}
+            underAttack={!!(underAttack && underAttack.expiresAt > Date.now())}
           />
 
           {/* Center: Shop */}
@@ -267,6 +339,11 @@ export default function Home() {
                 <Scoreboard
                   playerName={playerName}
                   playerTotal={gameState.totalEarned}
+                  playerBalance={gameState.balance}
+                  playerId={playerId}
+                  onAttackLaunched={() => {
+                    // Refresh balance from state (state will auto-update on next save)
+                  }}
                 />
               </motion.div>
             )}
@@ -282,10 +359,21 @@ export default function Home() {
                 <span className="text-slate-500">Balance</span>
                 <span className="text-yellow-400 font-mono">{formatEuros(gameState.balance)}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">Income/s</span>
-                <span className="text-green-400 font-mono">{formatEuros(eps)}</span>
+                <div className="flex items-center gap-1.5">
+                  {attackMultiplier < 1 && (
+                    <span className="text-red-400 font-mono line-through opacity-60">{formatEuros(baseEps)}</span>
+                  )}
+                  <span className={`font-mono ${attackMultiplier < 1 ? 'text-red-400' : 'text-green-400'}`}>{formatEuros(eps)}</span>
+                </div>
               </div>
+              {attackMultiplier < 1 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-red-500/80">Sabotage</span>
+                  <span className="text-red-400 font-mono">-{Math.round((1 - attackMultiplier) * 100)}%</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-500">Click value</span>
                 <span className="text-slate-300 font-mono">{formatEuros(gameState.clickValue)}</span>
@@ -302,8 +390,14 @@ export default function Home() {
         <Toast.Root
           open={toastOpen}
           onOpenChange={setToastOpen}
-          duration={3000}
-          className="bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3"
+          duration={4000}
+          className={`border rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3 ${
+            toastVariant === 'red'
+              ? 'bg-red-950 border-red-500/60'
+              : toastVariant === 'green'
+              ? 'bg-green-950 border-green-500/60'
+              : 'bg-slate-800 border-slate-600'
+          }`}
         >
           <Toast.Description className="text-white text-sm font-medium">
             {toastMsg}
