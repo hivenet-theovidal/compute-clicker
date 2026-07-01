@@ -44,14 +44,14 @@ export default function NameModal({ open, onIdentified }: Props) {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="bg-slate-900 border border-slate-700 rounded-2xl p-8 w-[360px] shadow-2xl"
+            className="bg-surface border border-line-2 rounded-2xl p-8 w-[360px] shadow-2xl"
           >
             <div className="text-center mb-6">
               <div className="text-4xl mb-3">🖥️</div>
-              <Dialog.Title className="text-2xl font-bold text-white mb-1">
+              <Dialog.Title className="text-2xl font-bold text-fg mb-1">
                 Welcome to HiveNet
               </Dialog.Title>
-              <Dialog.Description className="text-slate-400 text-sm">
+              <Dialog.Description className="text-muted text-sm">
                 Build your cloud empire. Enter your name to start.
               </Dialog.Description>
             </div>
@@ -64,13 +64,13 @@ export default function NameModal({ open, onIdentified }: Props) {
                 placeholder="Your name"
                 maxLength={30}
                 autoFocus
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-yellow-400 transition-colors"
+                className="w-full bg-surface-2 border border-line-2 rounded-lg px-4 py-3 text-fg placeholder-dim focus:outline-none focus:border-accent transition-colors"
               />
               {error && <p className="text-red-400 text-sm">{error}</p>}
               <button
                 type="submit"
                 disabled={loading || !name.trim()}
-                className="w-full bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold py-3 rounded-lg transition-colors"
+                className="w-full bg-accent hover:bg-accent-fg disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold py-3 rounded-lg transition-colors"
               >
                 {loading ? 'Starting…' : 'Start Building'}
               </button>
