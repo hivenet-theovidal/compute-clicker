@@ -211,11 +211,14 @@ export function totalEps(state: FullGameState): number {
   return eps;
 }
 
+export const ATTACK_REDUCTION = 0.3;
+export const ATTACK_DURATION_MS = 90_000;
+
 /** Advance the game state by dt milliseconds (passive income) */
-export function tick(state: FullGameState, nowMs: number): FullGameState {
+export function tick(state: FullGameState, nowMs: number, incomeMultiplier = 1.0): FullGameState {
   const dt = Math.max(0, (nowMs - state.lastTick) / 1000);
   const eps = totalEps(state);
-  const earned = eps * dt;
+  const earned = eps * dt * incomeMultiplier;
   return {
     ...state,
     balance: state.balance + earned,
@@ -304,10 +307,11 @@ export function deserializeState(json: string): FullGameState {
 export function validateStateDelta(
   previous: FullGameState | null,
   incoming: FullGameState,
-  maxDeltaSeconds = 10
+  maxDeltaSeconds = 10,
+  attackMultiplier = 1.0
 ): boolean {
   if (!previous) return true;
-  const maxEps = totalEps(previous);
+  const maxEps = totalEps(previous) * attackMultiplier;
   const timeDelta = maxDeltaSeconds;
   const maxPossibleEarned = previous.totalEarned + maxEps * timeDelta + previous.clickValue * 50;
   return incoming.totalEarned <= maxPossibleEarned + 1;

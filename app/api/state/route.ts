@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getGameState, upsertGameState, getPlayer } from '@/lib/db';
+import { getGameState, upsertGameState, getPlayer, getActiveAttacksOn } from '@/lib/db';
 import {
   deserializeState,
   serializeState,
@@ -47,7 +47,10 @@ export async function POST(req: NextRequest) {
   const row = getGameState(playerId);
   const previous = row ? deserializeState(row.state_json) : null;
 
-  if (!validateStateDelta(previous, incoming)) {
+  const activeAttacks = getActiveAttacksOn(playerId);
+  const attackMultiplier = activeAttacks.length > 0 ? 0.7 : 1.0;
+
+  if (!validateStateDelta(previous, incoming, 10, attackMultiplier)) {
     return NextResponse.json({ error: 'Invalid state delta' }, { status: 400 });
   }
 
