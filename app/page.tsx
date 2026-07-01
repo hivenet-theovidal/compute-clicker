@@ -44,7 +44,7 @@ const TICK_INTERVAL_MS = 100;
 let floatingIdCounter = 0;
 
 interface AttacksResponse {
-  activeAttacks: { reduction: number; expires_at: number }[];
+  activeAttacks: { reduction: number; expires_at: number; attacker_name: string }[];
   myCooldowns: Record<string, number>;
 }
 
@@ -122,7 +122,7 @@ export default function Home() {
         const isNew = knownAttackExpiresRef.current !== attack.expires_at;
         knownAttackExpiresRef.current = attack.expires_at;
         setUnderAttack({ reduction: attack.reduction, expiresAt: attack.expires_at });
-        if (isNew) showToast('🔴 Sabotage detected — income −30% for 90s', 'red');
+        if (isNew) showToast(`🔴 Sabotage by ${attack.attacker_name} — income −30% for 90s`, 'red');
       } else if (knownAttackExpiresRef.current !== null) {
         knownAttackExpiresRef.current = null;
         setUnderAttack(null);
@@ -245,6 +245,7 @@ export default function Home() {
       setTimeout(() => {
         setQcmFeedback(null);
         setActiveQcm(null);
+        setGameState((s) => ({ ...s, lastTick: Date.now() }));
       }, 2000);
     } else {
       // Mauvaise réponse -> Pénalité de 15%
@@ -269,6 +270,7 @@ export default function Home() {
       setTimeout(() => {
         setQcmFeedback(null);
         setActiveQcm(null);
+        setGameState((s) => ({ ...s, lastTick: Date.now() }));
       }, 3000);
     }
   }, [activeQcm]);

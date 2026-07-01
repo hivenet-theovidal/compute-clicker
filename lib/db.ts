@@ -136,12 +136,15 @@ export function createAttack(
   };
 }
 
-export function getActiveAttacksOn(targetId: string): Attack[] {
+export function getActiveAttacksOn(targetId: string): (Attack & { attacker_name: string })[] {
   const db = getDb();
   const now = Date.now();
   return db.prepare(`
-    SELECT * FROM attacks WHERE target_id = ? AND expires_at > ?
-  `).all(targetId, now) as Attack[];
+    SELECT a.*, p.name AS attacker_name
+    FROM attacks a
+    JOIN players p ON p.id = a.attacker_id
+    WHERE a.target_id = ? AND a.expires_at > ?
+  `).all(targetId, now) as (Attack & { attacker_name: string })[];
 }
 
 /** Returns ms remaining on the cooldown, or null if no active attack from attacker on target */
