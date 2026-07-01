@@ -141,7 +141,7 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
       theta: thetaRef.current,
       dark: 1,
       diffuse: 1.25,
-      mapSamples: 16000,
+      mapSamples: 13000,
       mapBrightness: 5,
       baseColor: [0.17, 0.19, 0.24],
       markerColor: [1.0, 0.6, 0.2],
