@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
   }
   // ---------------------------------------
 
-  const PROBABILITE = 0.05; 
+  const PROBABILITE = 0.03; 
   let qcmEvent = null;
 
   // --- NOUVEAU : Filtrage des questions ---
