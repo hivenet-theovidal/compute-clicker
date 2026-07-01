@@ -201,23 +201,8 @@ export async function POST(req: NextRequest) {
   }
   // ---------------------------------------
 
-  const PROBABILITE = 0.05; 
-  let qcmEvent = null;
-
-  // --- NOUVEAU : Filtrage des questions ---
-  // On ne garde dans notre chapeau que les questions dont le joueur possède le matériel
-  const availableQuestions = ANTIMATTER_QUESTIONS.filter(q => ownedComponents.has(q.penaltyType));
-
-  // On lance le dé SEULEMENT si le joueur possède au moins un type de matériel
-  if (availableQuestions.length > 0 && Math.random() < PROBABILITE) {
-    // On pioche au hasard parmi les questions valides
-    const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-    qcmEvent = availableQuestions[randomIndex];
-  }
-  // ----------------------------------------
-
-  return NextResponse.json({ 
+  return NextResponse.json({
     ok: true,
-    qcmEvent: qcmEvent 
+    qcmEvent: null
   });
 }
