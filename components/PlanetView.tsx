@@ -29,8 +29,8 @@ const REGION_LOCATION: Record<RegionId, [number, number]> = {
   brazil: [-23.55, -46.63],
 };
 
-const REGION_FLAG: Record<RegionId, string> = {
-  uae: '🇦🇪', eu: '🇪🇺', us: '🇺🇸', sea: '🇸🇬', brazil: '🇧🇷',
+const REGION_IMAGE: Record<RegionId, string> = {
+  uae: 'uae', eu: 'france', us: 'usa', sea: 'asia', brazil: 'brazil',
 };
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -255,7 +255,7 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
       {/* atmosphere glow */}
       <div
         className="pointer-events-none absolute rounded-full"
-        style={{ inset: -40, boxShadow: '0 0 120px 10px #2b6fff22, inset 0 0 90px #0d3a6620' }}
+        style={{ inset: -40, boxShadow: '0 0 97px 8px #2b6fff1c, inset 0 0 73px #0d3a661a' }}
       />
       <canvas
         ref={canvasRef}
@@ -280,8 +280,8 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
           const total = regionTotal(state, rid);
           const idx = REGION_ORDER.indexOf(rid);
           const floatClass = `icon-float-${(idx % 3) + 1}`;
-          const fontSize =
-            (rs.unlocked ? 42 : 38) + (rs.unlocked ? Math.min(14, total * 0.28) : 0) + (isActive ? 8 : 0);
+          const size =
+            (rs.unlocked ? 75 : 60) + (rs.unlocked ? Math.min(16, total * 0.3) : 0) + (isActive ? 8 : 0);
 
           return (
             <div key={rid} className="contents">
@@ -336,29 +336,41 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
               {/* region flag */}
               <button
                 ref={setFlagRef(rid)}
-                onClick={() => rs.unlocked && onSelectRegion(rid)}
+                onClick={() => onSelectRegion(rid)}
                 aria-label={def.name}
                 className="group absolute left-0 top-0 will-change-transform"
-                style={{ opacity: 0, cursor: rs.unlocked ? 'pointer' : 'default' }}
+                style={{ opacity: 0, cursor: 'pointer' }}
               >
-                {isActive && rs.unlocked && (
+                {isActive && (
                   <span
                     className="marker-pulse absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
                     style={{ width: 62, height: 62, border: `2px solid ${def.color}` }}
                   />
                 )}
+                {!isActive && !rs.unlocked && (
+                  <span
+                    className="glow-pulse absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+                    style={{ width: 50, height: 50, background: `radial-gradient(circle, ${def.color}33, transparent 70%)`, boxShadow: `0 0 16px 2px ${def.color}44` }}
+                  />
+                )}
                 <span className="relative block transition-transform duration-200 ease-out group-hover:scale-125">
                   <span
                     className={`relative block leading-none ${isActive ? 'marker-bob' : floatClass}`}
-                    style={{
-                      fontSize,
-                      animationDelay: `${idx * 0.4}s`,
-                      filter: rs.unlocked
-                        ? `drop-shadow(0 2px 5px #000b) drop-shadow(0 0 8px ${def.color}${isActive ? 'dd' : '66'})`
-                        : 'grayscale(0.5) drop-shadow(0 2px 5px #000b)',
-                    }}
+                    style={{ animationDelay: `${idx * 0.4}s` }}
                   >
-                    {REGION_FLAG[rid]}
+                    <img
+                      src={`/images/countries/${REGION_IMAGE[rid]}.png`}
+                      alt={def.name}
+                      width={size}
+                      height={size}
+                      draggable={false}
+                      className="block object-contain"
+                      style={{
+                        filter: rs.unlocked
+                          ? `drop-shadow(0 2px 5px #000b) drop-shadow(0 0 8px ${def.color}${isActive ? 'dd' : '66'})`
+                          : 'grayscale(1) brightness(0.65) drop-shadow(0 2px 5px #000b)',
+                      }}
+                    />
                     {!rs.unlocked && (
                       <span className="absolute -bottom-1 -right-1.5 text-[13px] drop-shadow">🔒</span>
                     )}

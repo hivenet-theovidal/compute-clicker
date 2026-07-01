@@ -64,7 +64,9 @@ export default function LeaderboardWindow({ playerName, playerId, playerTotal, p
     }
   }
 
-  function AttackButton({ entry }: { entry: LeaderboardEntry }) {
+  // NB: a plain function called inline (not a nested <Component/>), so the button
+  // isn't remounted on every 100ms re-render — which was eating clicks.
+  const renderAttackButton = (entry: LeaderboardEntry) => {
     const isSelf = entry.player_id === playerId || entry.name === playerName;
     if (isSelf) return null;
     const cost = attackCost(playerTotal, entry.total_earned);
@@ -87,7 +89,7 @@ export default function LeaderboardWindow({ playerName, playerId, playerTotal, p
         ⚔️
       </button>
     );
-  }
+  };
 
   return (
     <div className="glass rounded-2xl w-64 overflow-hidden">
@@ -128,7 +130,7 @@ export default function LeaderboardWindow({ playerName, playerId, playerTotal, p
                       {entry.name}
                     </span>
                     <span className="font-mono tabular-nums text-info-fg">{formatEuros(entry.total_earned)}</span>
-                    <span className="w-6 text-right"><AttackButton entry={entry} /></span>
+                    <span className="w-6 text-right">{renderAttackButton(entry)}</span>
                   </div>
                 );
               })}

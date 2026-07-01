@@ -13,6 +13,11 @@ export const COMPONENT_META: Record<ComponentType, { color: string; tag: string 
   container: { color: '#ff8a5c', tag: 'Policloud node' },
 };
 
+/** Provided artwork in public/images (bandwidth uses the wifi icon). */
+export const COMPONENT_IMAGE: Record<ComponentType, string> = {
+  cpu: 'cpu', ram: 'ram', gpu: 'gpu', power: 'power', bandwidth: 'wifi', container: 'container',
+};
+
 interface Props {
   type: ComponentType;
   owned: number;
@@ -88,25 +93,30 @@ export default function UpgradeNode({
       <div className={`relative flex items-center gap-3 p-2.5 ${locked ? 'holo-flicker' : ''}`}>
         {/* Icon machine */}
         <div key={popKey} className={popKey ? 'node-pop' : ''}>
-          <div
-            className="relative grid place-items-center rounded-xl"
-            style={{
-              width: 46, height: 46,
-              background: locked ? 'rgba(10,16,30,0.6)' : `radial-gradient(circle at 35% 25%, ${meta.color}33, ${meta.color}0d 70%)`,
-              boxShadow: locked
-                ? `inset 0 0 0 1px ${meta.color}40`
-                : `inset 0 0 0 1px ${meta.color}66, 0 0 18px -4px ${meta.color}`,
-            }}
-          >
-            <img
-              src={`/assets/${type}.svg`}
-              alt={def.name}
-              width={26}
-              height={26}
-              draggable={false}
-              style={locked ? { filter: 'grayscale(1) brightness(1.4) sepia(1) hue-rotate(180deg)', opacity: 0.55 } : { filter: `drop-shadow(0 0 5px ${meta.color}aa)` }}
+          <div className="relative" style={{ width: 46, height: 46 }}>
+            {/* glowing pedestal */}
+            <div
+              className="absolute inset-0 rounded-xl"
+              style={{
+                background: locked ? 'rgba(10,16,30,0.6)' : `radial-gradient(circle at 35% 25%, ${meta.color}33, ${meta.color}0d 70%)`,
+                boxShadow: locked
+                  ? `inset 0 0 0 1px ${meta.color}40`
+                  : `inset 0 0 0 1px ${meta.color}66, 0 0 18px -4px ${meta.color}`,
+              }}
             />
             {buyable && <span className="ring-burst absolute inset-0 rounded-xl" style={{ boxShadow: `0 0 0 2px #ff9a33` }} />}
+            {/* artwork sits proud of the frame */}
+            <img
+              src={`/images/${COMPONENT_IMAGE[type]}.png`}
+              alt={def.name}
+              width={56}
+              height={56}
+              draggable={false}
+              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain"
+              style={locked
+                ? { filter: 'grayscale(1) brightness(0.6)', opacity: 0.6 }
+                : { filter: `drop-shadow(0 3px 5px rgba(0,0,0,0.55)) drop-shadow(0 0 8px ${meta.color}bb)` }}
+            />
           </div>
         </div>
 

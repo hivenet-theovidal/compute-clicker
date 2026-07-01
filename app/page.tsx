@@ -8,6 +8,7 @@ import GameBackground from '@/components/GameBackground';
 import PlanetView from '@/components/PlanetView';
 import CurrencyHUD from '@/components/CurrencyHUD';
 import DeployButton from '@/components/DeployButton';
+import RegionRail from '@/components/RegionRail';
 import TechTree from '@/components/TechTree';
 import LeaderboardWindow from '@/components/LeaderboardWindow';
 import StatsWidget from '@/components/StatsWidget';
@@ -205,6 +206,9 @@ export default function Home() {
   const eps = baseEps * (attacked ? 1 - underAttack!.reduction : 1);
   const attackSecs = attacked ? Math.max(0, Math.ceil((underAttack!.expiresAt - Date.now()) / 1000)) : 0;
   const tv = TOAST_STYLE[toastVariant];
+  const toastSpace = toastMsg.indexOf(' ');
+  const toastIcon = toastSpace > 0 ? toastMsg.slice(0, toastSpace) : '✨';
+  const toastText = toastSpace > 0 ? toastMsg.slice(toastSpace + 1) : toastMsg;
 
   return (
     <Toast.Provider swipeDirection="right">
@@ -234,30 +238,34 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Player badge */}
+        {/* Player badge — commented out for now
         {identified && (
           <div className="glass absolute right-5 top-4 rounded-full px-4 py-2 text-xs">
             <span className="text-dim">Commander </span>
             <span className="font-bold text-fg">{playerName}</span>
           </div>
         )}
+        */}
 
-        {/* Currency HUD */}
-        <div className="absolute left-1/2 top-6 -translate-x-1/2 flex flex-col items-center">
-          <CurrencyHUD balance={gameState.balance} eps={eps} />
-          {attacked && (
-            <div
-              className="glow-pulse mt-2 rounded-full px-3 py-1 text-[11px] font-bold"
-              style={{ background: 'rgba(255,59,59,0.14)', color: '#ff8a8a', boxShadow: 'inset 0 0 0 1px #ff5a5a55' }}
-            >
-              ⚠ UNDER SABOTAGE · −{Math.round(underAttack!.reduction * 100)}% · {attackSecs}s
-            </div>
-          )}
+        {/* Currency HUD + region selector — top row */}
+        <div className="absolute left-1/2 top-6 -translate-x-1/2 flex items-center gap-8">
+          <div className="flex flex-col items-center min-w-[340px]">
+            <CurrencyHUD balance={gameState.balance} eps={eps} />
+            {attacked && (
+              <div
+                className="glow-pulse mt-2 rounded-full px-3 py-1 text-[11px] font-bold"
+                style={{ background: 'rgba(255,59,59,0.14)', color: '#ff8a8a', boxShadow: 'inset 0 0 0 1px #ff5a5a55' }}
+              >
+                ⚠ UNDER SABOTAGE · −{Math.round(underAttack!.reduction * 100)}% · {attackSecs}s
+              </div>
+            )}
+          </div>
+          <RegionRail state={gameState} activeRegion={activeRegion} onSelectRegion={setActiveRegion} />
         </div>
 
         {/* Leaderboard (with sabotage) */}
         {identified && (
-          <div className="absolute left-5 top-24">
+          <div className="absolute left-5 top-48">
             <LeaderboardWindow
               playerName={playerName}
               playerId={playerId}
@@ -272,31 +280,37 @@ export default function Home() {
           <StatsWidget totalEarned={gameState.totalEarned} eps={eps} clickValue={gameState.clickValue} />
         </div>
 
-        {/* Deploy */}
-        <div className="absolute left-1/2 bottom-7 -translate-x-1/2">
+        {/* Deploy — bottom center */}
+        <div className="absolute left-1/2 bottom-10 -translate-x-1/2">
           <DeployButton clickValue={gameState.clickValue} onCLick={handleClick} />
         </div>
 
         {/* Tech tree */}
         <div className="absolute right-5 bottom-5">
-          <TechTree state={gameState} activeRegion={activeRegion} onBuy={handleBuy} onSelectRegion={setActiveRegion} />
+          <TechTree state={gameState} activeRegion={activeRegion} onBuy={handleBuy} />
         </div>
 
         {/* Overlays */}
         <NameModal open={!identified && loaded} onIdentified={handleIdentified} />
         <FloatingNumbers numbers={floatingNums} />
 
-        {/* Toast */}
+        {/* Toast — prominent announcement */}
         <Toast.Root
           open={toastOpen}
           onOpenChange={setToastOpen}
-          duration={3200}
-          className="glass rounded-2xl px-4 py-3 flex items-center justify-center gap-3 transition-all data-[state=closed]:opacity-0 data-[state=closed]:translate-y-3"
-          style={{ boxShadow: `0 0 0 1px ${tv.border}, inset 0 0 34px -18px ${tv.glow}, 0 24px 70px -30px rgba(0,0,0,0.9)` }}
+          duration={3600}
+          className="toast-root glass rounded-2xl pl-3 pr-5 py-3 flex items-center gap-3"
+          style={{ boxShadow: `0 0 0 1.5px ${tv.border}, 0 0 55px -6px ${tv.glow}, inset 0 0 40px -20px ${tv.glow}, 0 24px 70px -30px rgba(0,0,0,0.9)` }}
         >
-          <Toast.Description className="text-fg text-sm font-semibold">{toastMsg}</Toast.Description>
+          <span
+            className="glow-pulse grid place-items-center rounded-xl text-2xl shrink-0"
+            style={{ width: 44, height: 44, background: `${tv.glow}22`, boxShadow: `inset 0 0 0 1px ${tv.glow}66` }}
+          >
+            {toastIcon}
+          </span>
+          <Toast.Description className="text-fg text-base font-bold tracking-tight whitespace-nowrap">{toastText}</Toast.Description>
         </Toast.Root>
-        <Toast.Viewport className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[80] flex flex-col gap-2 w-80 items-center" />
+        <Toast.Viewport className="fixed top-1/3 left-1/2 -translate-x-1/2 z-[90] flex flex-col gap-2 items-center" />
       </main>
     </Toast.Provider>
   );

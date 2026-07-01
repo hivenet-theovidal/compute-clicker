@@ -433,3 +433,31 @@ body {
   100% { background-position: 0 -16px; }
 }
 .flow { background-image: repeating-linear-gradient(180deg, currentColor 0 4px, transparent 4px 12px); animation: flow 0.9s linear infinite; }
+
+/* Toast — prominent game announcement */
+@keyframes toast-pop {
+  0%   { opacity: 0; transform: translateY(-22px) scale(0.8); }
+  55%  { transform: translateY(4px) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-dismiss { to { opacity: 0; transform: translateY(-14px) scale(0.94); } }
+.toast-root[data-state='open']   { animation: toast-pop 0.46s cubic-bezier(0.2, 1.5, 0.4, 1); }
+.toast-root[data-state='closed'] { animation: toast-dismiss 0.26s ease-in forwards; }
+.toast-root[data-swipe='end']    { animation: toast-dismiss 0.2s ease-out forwards; }
+
+/* Coin flip on income gains */
+@keyframes coin-flip { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+.coin-flip { animation: coin-flip 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* Shimmering gold currency text */
+@keyframes gold-sheen { 0% { background-position: 0% 50%; } 100% { background-position: 220% 50%; } }
+.gold-text {
+  background: linear-gradient(100deg, #e0820f 0%, #ffbf5e 16%, #fff3d6 27%, #ffbf5e 38%, #ffb257 58%, #e0820f 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 12px rgba(255, 154, 51, 0.45)) drop-shadow(0 0 26px rgba(255, 154, 51, 0.25));
+  animation: gold-sheen 4.5s linear infinite;
+}
