@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Orbitron } from 'next/font/google';
 import { formatEuros } from '@/lib/game-engine';
+
+// Dedicated numeric font for the balance — heavy weights + uniform tabular figures.
+const numFont = Orbitron({ subsets: ['latin'] });
 
 interface Props {
   balance: number;
@@ -26,7 +30,7 @@ function formatBalance(v: number): string {
 /** A single odometer digit slot — rolls the new digit in from the top. */
 function RollDigit({ ch }: { ch: string }) {
   return (
-    <span className="relative inline-block overflow-hidden" style={{ height: '1em', width: '0.62em', lineHeight: 1 }}>
+    <span className="relative inline-block overflow-hidden" style={{ height: '1em', width: '1ch', lineHeight: 1 }}>
       <AnimatePresence initial={false}>
         <motion.span
           key={ch}
@@ -112,16 +116,25 @@ export default function CurrencyHUD({ balance, eps }: Props) {
 
       {/* coin + rolling gold balance */}
       <div className="flex items-center gap-3" style={{ perspective: 420 }}>
-        <Ticker text={numText} className="text-6xl md:text-7xl font-black tabular-nums leading-none" />
+        <Ticker text={numText} className={`${numFont.className} text-6xl md:text-7xl font-black tabular-nums leading-none`} />
       </div>
 
-      {/* income chip */}
+      {/* passive income — playful badge */}
       <div
-        className="mt-2.5 flex items-center gap-2 rounded-sm px-3 py-2 text-xs"
-        style={{ background: 'rgba(87,130,255,0.1)', boxShadow: 'inset 0 0 0 1px rgba(87,130,255,0.24)' }}
+        className="mt-2.5 flex items-center gap-2 rounded-full pl-1.5 pr-3 py-1"
+        style={{
+          background: 'linear-gradient(90deg, rgba(87,130,255,0.24), rgba(87,130,255,0.05))',
+          boxShadow: 'inset 0 0 0 1px rgba(87,130,255,0.38), 0 0 20px -6px rgba(87,130,255,0.6)',
+        }}
       >
-        <span className="glow-blue font-bold tabular-nums" style={{ color: '#93b4ff' }}>▲ {formatEuros(eps)}/s</span>
-        <span className="text-faint">Passive Income</span>
+        <span
+          className="glow-pulse grid place-items-center rounded-full text-xs"
+          style={{ width: 22, height: 22, background: 'radial-gradient(circle at 35% 30%, #bcd0ff, #4f7dff)', boxShadow: '0 0 10px -2px #6b93ff' }}
+        >
+          ⚡
+        </span>
+        <span className="glow-blue font-black tabular-nums text-sm" style={{ color: '#aecaff' }}>+{formatEuros(eps)}/s</span>
+        <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-faint">passive</span>
       </div>
     </div>
   );

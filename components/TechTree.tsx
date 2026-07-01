@@ -47,11 +47,22 @@ export default function TechTree({ state, activeRegion, onBuy }: Props) {
       initial={{ opacity: 0, y: 24, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 240, damping: 26 }}
-      className="glass rounded-3xl w-[356px] px-3.5 py-2.5"
+      className="glass rounded-3xl w-[356px] px-3.5 py-2.5 relative"
     >
+      {/* zap emblem bursting out of the top — same idea as the leaderboard medal */}
+      <span
+        className="glow-pulse pointer-events-none absolute rounded-full"
+        style={{ left: 12, top: -74, width: 120, height: 120, background: 'radial-gradient(circle, #ff9a3366, transparent 68%)' }}
+      />
+      <img
+        src="/images/zap.png"
+        alt=""
+        draggable={false}
+        className="medal-live pointer-events-none absolute z-10 object-contain"
+        style={{ width: 100, height: 100, left: -6, top: -60, filter: 'drop-shadow(0 6px 11px rgba(0,0,0,0.55))' }}
+      />
       {/* header */}
-      <div className="mb-2.5 flex items-center gap-2">
-        <span className="text-base">🧬</span>
+      <div className="mb-2.5 flex items-center gap-2 pl-[96px]">
         <span className="text-xs font-black uppercase tracking-[0.22em] text-fg">Tech Tree</span>
       </div>
 

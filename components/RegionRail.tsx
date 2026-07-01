@@ -22,7 +22,7 @@ interface Props {
 /** Prominent region selector rail — which datacenter region you're building in. */
 export default function RegionRail({ state, activeRegion, onSelectRegion }: Props) {
   return (
-    <div className="glass rounded-2xl px-2.5 py-1.5 flex items-center gap-2">
+    <div className="glass rounded-2xl px-2 py-1.5 flex items-center gap-1.5">
       {REGION_ORDER.map((rid) => {
         const def = REGIONS[rid];
         const rs = state.regions[rid];
@@ -34,7 +34,7 @@ export default function RegionRail({ state, activeRegion, onSelectRegion }: Prop
           <button
             key={rid}
             onClick={() => onSelectRegion(rid)}
-            className="relative flex items-center gap-2.5 rounded-xl px-4 py-2 transition-all hover:brightness-125"
+            className="relative flex items-center gap-2 rounded-xl px-2.5 py-2 transition-all hover:brightness-125"
             style={{
               background: active ? `linear-gradient(160deg, ${def.color}30, ${def.color}10)` : 'transparent',
               boxShadow: active ? `inset 0 0 0 1.5px ${def.color}, 0 0 22px -4px ${def.color}` : 'none',
@@ -46,12 +46,12 @@ export default function RegionRail({ state, activeRegion, onSelectRegion }: Prop
             <img
               src={`/images/countries/${REGION_IMAGE[rid]}.png`}
               alt={def.name}
-              width={85}
-              height={85}
+              width={78}
+              height={78}
               draggable={false}
               className="shrink-0 object-contain"
               style={{
-                marginTop: -46,
+                marginTop: -42,
                 marginBottom: -2,
                 marginLeft: -4,
                 marginRight: -6,

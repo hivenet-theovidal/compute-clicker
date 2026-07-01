@@ -11,7 +11,7 @@ import {
   type RegionId,
   type FullGameState,
 } from '@/lib/game-engine';
-import { COMPONENT_META } from './UpgradeNode';
+import { COMPONENT_META, COMPONENT_IMAGE } from './UpgradeNode';
 
 // ── Globe geometry ─────────────────────────────────────────────
 const GLOBE_SIZE = 600;
@@ -309,11 +309,12 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
                           }}
                         >
                           <img
-                            src={`/assets/${type}.svg`}
+                            src={`/images/${COMPONENT_IMAGE[type]}.png`}
                             alt={COMPONENTS[type].name}
-                            width={Math.round(TILE * 0.6)}
-                            height={Math.round(TILE * 0.6)}
+                            width={Math.round(TILE * 0.74)}
+                            height={Math.round(TILE * 0.74)}
                             draggable={false}
+                            className="object-contain"
                             style={{ filter: `drop-shadow(0 0 4px ${meta.color}bb)` }}
                           />
                           <div

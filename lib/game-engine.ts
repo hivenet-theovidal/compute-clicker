@@ -89,7 +89,7 @@ export interface RegionDef {
 export const REGIONS: Record<RegionId, RegionDef> = {
   uae: {
     id: 'uae',
-    name: 'Middle Eastd',
+    name: 'Middle East',
     multiplier: 1.0,
     unlockCost: 0,
     color: '#F5A623',

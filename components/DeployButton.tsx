@@ -44,10 +44,18 @@ export default function DeployButton({ clickValue, onCLick }: Props) {
       </span>
 
       <span
-        className="grid place-items-center rounded-full text-3xl"
+        className="grid place-items-center rounded-full"
         style={{ width: 56, height: 56, background: 'rgba(0,0,0,0.18)', boxShadow: 'inset 0 0 12px rgba(0,0,0,0.35)' }}
       >
-        ⚡
+        <img
+          src="/images/zap.png"
+          alt=""
+          width={40}
+          height={40}
+          draggable={false}
+          className="object-contain"
+          style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.45))' }}
+        />
       </span>
       <span className="relative flex flex-col items-start leading-none">
         <span className="text-3xl tracking-wider">DEPLOY</span>
