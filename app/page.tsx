@@ -319,22 +319,24 @@ export default function Home() {
         )}
         */}
 
-        {/* Balance — top left */}
-        <div className="absolute left-8 top-6 flex flex-col items-start">
-          <CurrencyHUD balance={gameState.balance} eps={eps} />
-          {attacked && (
-            <div
-              className="glow-pulse mt-2 rounded-full px-3 py-1 text-[11px] font-bold"
-              style={{ background: 'rgba(255,59,59,0.14)', color: '#ff8a8a', boxShadow: 'inset 0 0 0 1px #ff5a5a55' }}
-            >
-              ⚠ UNDER SABOTAGE · −{Math.round(underAttack!.reduction * 100)}% · {attackSecs}s
-            </div>
-          )}
-        </div>
-
-        {/* Region selector — top center */}
-        <div className="absolute left-1/2 top-10 -translate-x-1/2">
-          <RegionRail state={gameState} activeRegion={activeRegion} onSelectRegion={setActiveRegion} />
+        {/* Top bar — reserved balance zone (left) + region rail centered in the rest */}
+        <div className="absolute inset-x-0 top-6 flex items-start px-8">
+          {/* balance — reserved width so bigger numbers have room */}
+          <div className="w-[380px] shrink-0 flex flex-col items-start">
+            <CurrencyHUD balance={gameState.balance} eps={eps} />
+            {attacked && (
+              <div
+                className="glow-pulse mt-2 rounded-full px-3 py-1 text-[11px] font-bold"
+                style={{ background: 'rgba(255,59,59,0.14)', color: '#ff8a8a', boxShadow: 'inset 0 0 0 1px #ff5a5a55' }}
+              >
+                ⚠ UNDER SABOTAGE · −{Math.round(underAttack!.reduction * 100)}% · {attackSecs}s
+              </div>
+            )}
+          </div>
+          {/* region rail centered in the remaining space */}
+          <div className="flex-1 flex justify-center pt-4">
+            <RegionRail state={gameState} activeRegion={activeRegion} onSelectRegion={setActiveRegion} />
+          </div>
         </div>
 
         {/* Player HUD — leaderboard + stats merged, bottom left */}
