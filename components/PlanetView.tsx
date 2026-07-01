@@ -4,17 +4,20 @@ import { useEffect, useRef, useMemo, useCallback } from 'react';
 import createGlobe from 'cobe';
 import type { Arc } from 'cobe';
 import {
+  COMPONENTS,
   REGIONS,
   REGION_ORDER,
   type ComponentType,
   type RegionId,
   type FullGameState,
 } from '@/lib/game-engine';
+import { COMPONENT_META } from './UpgradeNode';
 
 // ── Globe geometry ─────────────────────────────────────────────
 const GLOBE_SIZE = 600;
 const CENTER = GLOBE_SIZE / 2;
 const RADIUS_PX = GLOBE_SIZE * 0.46;
+const TILE = 32;
 
 const COMPONENT_ORDER: ComponentType[] = ['cpu', 'ram', 'gpu', 'power', 'bandwidth', 'container'];
 
@@ -97,8 +100,15 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
   const draggingRef = useRef(false);
   const dragPrevRef = useRef<{ x: number; y: number } | null>(null);
   const flagRefs = useRef<Partial<Record<RegionId, HTMLButtonElement>>>({});
+  const compRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const arcsRef = useRef<Arc[]>(buildArcs(state, activeRegion));
   const dirtyRef = useRef(false);
+
+  // Owned component types per region — kept in a ref so the RAF loop can fan them.
+  const ownedTypesRef = useRef<Record<RegionId, ComponentType[]>>({ uae: [], eu: [], us: [], sea: [], brazil: [] });
+  const ownedTypes = {} as Record<RegionId, ComponentType[]>;
+  for (const rid of REGION_ORDER) ownedTypes[rid] = COMPONENT_ORDER.filter((t) => state.regions[rid].components[t] > 0);
+  ownedTypesRef.current = ownedTypes;
 
   const arcSig = useMemo(
     () => REGION_ORDER.map((rid) => (state.regions[rid].unlocked ? 1 : 0)).join('') + activeRegion,
@@ -156,15 +166,45 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
       }
       globe.update(update);
 
+      const phi = phiRef.current, theta = thetaRef.current;
       for (const rid of REGION_ORDER) {
+        const { x, y, z } = projectRegion(rid, phi, theta);
+        const depth = Math.max(0, z);
+        const dscale = 0.72 + 0.28 * depth;
+        const opacity = String(clamp(z / 0.16, 0, 1));
+        const zi = Math.round((z + 1) * 100);
+
+        // region flag
         const el = flagRefs.current[rid];
-        if (!el) continue;
-        const { x, y, z } = projectRegion(rid, phiRef.current, thetaRef.current);
-        const scale = 0.72 + 0.28 * Math.max(0, z);
-        el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${scale})`;
-        el.style.opacity = String(clamp(z / 0.16, 0, 1));
-        el.style.zIndex = String(Math.round((z + 1) * 100));
-        el.style.pointerEvents = z > 0.05 ? 'auto' : 'none';
+        if (el) {
+          el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${dscale})`;
+          el.style.opacity = opacity;
+          el.style.zIndex = String(zi);
+          el.style.pointerEvents = z > 0.05 ? 'auto' : 'none';
+        }
+
+        // fan owned component tiles outward from the globe centre
+        const types = ownedTypesRef.current[rid];
+        const n = types.length;
+        if (n > 0) {
+          // Fan outward from the globe centre; pin a stable angle when the region
+          // sits dead-centre (focused/active) so the tiles don't jitter.
+          const dx0 = x - CENTER, dy0 = y - CENTER;
+          const outward = Math.hypot(dx0, dy0) < 26 ? Math.PI * 0.3 : Math.atan2(dy0, dx0);
+          const spread = n === 1 ? 0 : n <= 3 ? Math.PI * 0.42 : Math.PI * 0.9;
+          const ring = (56 + n * 4) * dscale;
+          for (let i = 0; i < n; i++) {
+            const tile = compRefs.current[`${rid}:${types[i]}`];
+            if (!tile) continue;
+            const t = n === 1 ? 0 : i / (n - 1) - 0.5;
+            const ang = outward + t * spread;
+            const cx = x + Math.cos(ang) * ring;
+            const cy = y + Math.sin(ang) * ring;
+            tile.style.transform = `translate(-50%, -50%) translate(${cx}px, ${cy}px) scale(${dscale})`;
+            tile.style.opacity = opacity;
+            tile.style.zIndex = String(zi - 1);
+          }
+        }
       }
 
       if (firstFrame) {
@@ -231,7 +271,7 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
         }}
       />
 
-      {/* flag markers projected onto the globe */}
+      {/* region flags + datacenter component tiles projected onto the globe */}
       <div className="absolute inset-0 pointer-events-none">
         {REGION_ORDER.map((rid) => {
           const def = REGIONS[rid];
@@ -241,55 +281,97 @@ export default function PlanetView({ state, activeRegion, onSelectRegion }: Prop
           const idx = REGION_ORDER.indexOf(rid);
           const floatClass = `icon-float-${(idx % 3) + 1}`;
           const fontSize =
-            (rs.unlocked ? 44 : 40) + (rs.unlocked ? Math.min(16, total * 0.3) : 0) + (isActive ? 8 : 0);
+            (rs.unlocked ? 42 : 38) + (rs.unlocked ? Math.min(14, total * 0.28) : 0) + (isActive ? 8 : 0);
 
           return (
-            <button
-              key={rid}
-              ref={setFlagRef(rid)}
-              onClick={() => rs.unlocked && onSelectRegion(rid)}
-              aria-label={def.name}
-              className="group absolute left-0 top-0 will-change-transform"
-              style={{ opacity: 0, cursor: rs.unlocked ? 'pointer' : 'default' }}
-            >
-              {isActive && rs.unlocked && (
-                <span
-                  className="marker-pulse absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
-                  style={{ width: 62, height: 62, border: `2px solid ${def.color}` }}
-                />
-              )}
-              <span className="relative block transition-transform duration-200 ease-out group-hover:scale-125">
-                <span
-                  className={`relative block leading-none ${isActive ? 'marker-bob' : floatClass}`}
-                  style={{
-                    fontSize,
-                    animationDelay: `${idx * 0.4}s`,
-                    filter: rs.unlocked
-                      ? `drop-shadow(0 2px 5px #000b) drop-shadow(0 0 8px ${def.color}${isActive ? 'dd' : '66'})`
-                      : 'grayscale(0.5) drop-shadow(0 2px 5px #000b)',
-                  }}
-                >
-                  {REGION_FLAG[rid]}
-                  {!rs.unlocked && (
-                    <span className="absolute -bottom-1 -right-1.5 text-[13px] drop-shadow">🔒</span>
-                  )}
-                  {rs.unlocked && total > 0 && (
-                    <span
-                      className="absolute -top-1 -right-2 rounded-full px-1 font-mono text-[10px] font-bold text-black"
-                      style={{ background: def.color }}
-                    >
-                      {total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total}
-                    </span>
-                  )}
-                </span>
-              </span>
-              <span
-                className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 mt-1 whitespace-nowrap rounded-md bg-surface/90 px-2 py-0.5 text-[10px] font-semibold text-fg opacity-0 transition-opacity group-hover:opacity-100"
-                style={{ border: `1px solid ${def.color}` }}
+            <div key={rid} className="contents">
+              {/* component datacenter tiles */}
+              {ownedTypes[rid].map((type, i) => {
+                const count = rs.components[type];
+                const meta = COMPONENT_META[type];
+                return (
+                  <div
+                    key={type}
+                    ref={(el) => { compRefs.current[`${rid}:${type}`] = el; }}
+                    className="absolute left-0 top-0 pointer-events-none will-change-transform"
+                    style={{ opacity: 0 }}
+                  >
+                    {/* entry pop (plays once on first purchase) */}
+                    <div className="node-pop">
+                      <div className={`icon-float-${(i % 3) + 1}`} style={{ animationDelay: `${i * 0.25}s` }}>
+                        <div
+                          className="relative grid place-items-center rounded-lg"
+                          style={{
+                            width: TILE, height: TILE,
+                            background: 'linear-gradient(160deg, #0e1a2ef2, #0a1220f2)',
+                            border: `1px solid ${def.color}66`,
+                            boxShadow: `0 0 ${Math.min(4 + count * 0.5, 16)}px ${def.color}77, inset 0 0 12px -7px ${meta.color}`,
+                          }}
+                        >
+                          <img
+                            src={`/assets/${type}.svg`}
+                            alt={COMPONENTS[type].name}
+                            width={Math.round(TILE * 0.6)}
+                            height={Math.round(TILE * 0.6)}
+                            draggable={false}
+                            style={{ filter: `drop-shadow(0 0 4px ${meta.color}bb)` }}
+                          />
+                          <div
+                            className="absolute -top-1.5 -right-1.5 grid place-items-center rounded-full font-bold text-black"
+                            style={{
+                              minWidth: 15, height: 15, paddingInline: 2,
+                              background: def.color, fontSize: count >= 100 ? 7 : 9,
+                              boxShadow: `0 0 6px ${def.color}`,
+                            }}
+                          >
+                            {count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* region flag */}
+              <button
+                ref={setFlagRef(rid)}
+                onClick={() => rs.unlocked && onSelectRegion(rid)}
+                aria-label={def.name}
+                className="group absolute left-0 top-0 will-change-transform"
+                style={{ opacity: 0, cursor: rs.unlocked ? 'pointer' : 'default' }}
               >
-                {rs.unlocked ? def.name : `🔒 ${def.name}`}
-              </span>
-            </button>
+                {isActive && rs.unlocked && (
+                  <span
+                    className="marker-pulse absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+                    style={{ width: 62, height: 62, border: `2px solid ${def.color}` }}
+                  />
+                )}
+                <span className="relative block transition-transform duration-200 ease-out group-hover:scale-125">
+                  <span
+                    className={`relative block leading-none ${isActive ? 'marker-bob' : floatClass}`}
+                    style={{
+                      fontSize,
+                      animationDelay: `${idx * 0.4}s`,
+                      filter: rs.unlocked
+                        ? `drop-shadow(0 2px 5px #000b) drop-shadow(0 0 8px ${def.color}${isActive ? 'dd' : '66'})`
+                        : 'grayscale(0.5) drop-shadow(0 2px 5px #000b)',
+                    }}
+                  >
+                    {REGION_FLAG[rid]}
+                    {!rs.unlocked && (
+                      <span className="absolute -bottom-1 -right-1.5 text-[13px] drop-shadow">🔒</span>
+                    )}
+                  </span>
+                </span>
+                <span
+                  className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 mt-1 whitespace-nowrap rounded-md bg-surface/90 px-2 py-0.5 text-[10px] font-semibold text-fg opacity-0 transition-opacity group-hover:opacity-100"
+                  style={{ border: `1px solid ${def.color}` }}
+                >
+                  {rs.unlocked ? def.name : `🔒 ${def.name}`}
+                </span>
+              </button>
+            </div>
           );
         })}
       </div>
